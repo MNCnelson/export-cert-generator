@@ -5,11 +5,11 @@ from reportlab.lib.units import mm
 import io
 import os
 
-def draw_blue_chop(c, x, y, vet_name, chop_date):
-    """精準還原圖片中印章日期的字形、大小、格式與傾斜度"""
+def draw_blue_chop(c, x, y, vet_name):
+    """Overlay the official blue stamp image directly using Multiply blend mode."""
     c.saveState()
     
-    # 根據獸醫姓名匹配底圖
+    # Match stamp image to selected veterinarian
     if "Amal" in vet_name:
         stamp_img = "stamp_amal.png"
     elif "Mahmoud" in vet_name:
@@ -18,38 +18,25 @@ def draw_blue_chop(c, x, y, vet_name, chop_date):
         stamp_img = "stamp_djamal.png"
         
     c.translate(x, y)
-    
-    # 印章整體傾斜角度
-    angle = 6.5
-    c.rotate(angle)
+    c.rotate(6.5) # Natural stamp rotation angle
 
     if os.path.exists(stamp_img):
-        # 1. 正片疊底模式（Multiply），避免白底遮擋後方表格文字
+        # Multiply blend mode preserves background black text underneath the stamp
         c.setBlendMode("Multiply")
         c.drawImage(stamp_img, 0, 0, width=75*mm, height=43*mm, preserveAspectRatio=True, mask='auto')
-        
-        # 2. 繪製動態日期（還原圖片字體大小與深藍色印泥質感）
-        c.setBlendMode("Normal")
-        c.setFillColorRGB(0.10, 0.22, 0.52) # 深藍墨色
-        
-        # 使用 15pt 粗體字型還原橡皮章打印感
-        c.setFont("Helvetica-Bold", 15)
-        
-        # 在擦除日期的區域精準列印傾斜日期
-        c.drawCentredString(35*mm, 15*mm, chop_date)
     else:
         c.setFillColorRGB(1, 0, 0)
         c.setFont("Helvetica", 10)
-        c.drawString(0, 20*mm, f"[請在 GitHub 上傳 {stamp_img}]")
+        c.drawString(0, 20*mm, f"[Please upload {stamp_img} to GitHub]")
         
     c.restoreState()
 
-def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production, vet_name, chop_date):
+def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production, vet_name):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     
     # ==========================================
-    # PAGE 1: 貨物標識與來源
+    # PAGE 1: Identification & Origin
     # ==========================================
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 280*mm, "ORIGINAL")
@@ -165,15 +152,15 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
     
-    # Page 1 印章
-    draw_blue_chop(c, x=120*mm, y=50*mm, vet_name=vet_name, chop_date=chop_date)
+    # Page 1 Stamp
+    draw_blue_chop(c, x=120*mm, y=50*mm, vet_name=vet_name)
 
     c.setFont("Helvetica", 8)
     c.drawString(15*mm, 15*mm, "HK VPG AVR 14.doc")
     c.drawString(190*mm, 15*mm, "1/2")
 
     # ==========================================
-    # PAGE 2: 衛生認證條款 
+    # PAGE 2: Health Certification Clauses
     # ==========================================
     c.showPage()
     
@@ -238,8 +225,8 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     text_y -= 5
     c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
 
-    # Page 2 印章
-    draw_blue_chop(c, x=118*mm, y=28*mm, vet_name=vet_name, chop_date=chop_date)
+    # Page 2 Stamp
+    draw_blue_chop(c, x=118*mm, y=28*mm, vet_name=vet_name)
 
     c.setFont("Helvetica", 8)
     c.drawString(15*mm, 15*mm, "HK VPG AVR 14.DOC")
@@ -250,7 +237,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     return buffer
 
 # ==========================
-# Streamlit 界面
+# Streamlit Interface
 # ==========================
 st.set_page_config(page_title="衛生證書生成系統", layout="centered")
 st.title("📄 官方雙頁衛生證書生成器")
@@ -270,11 +257,7 @@ with st.form("cert_form"):
         date_production = st.text_input("生產日期 (Date of production)", value="SEE ANNEXE")
         
     st.subheader("獸醫蓋章資訊 / Veterinarian Stamp")
-    col3, col4 = st.columns(2)
-    with col3:
-        vet_name_input = st.selectbox("官方獸醫 (Official Veterinarian)", ["Dr Djamal OULDAROUS", "Dr Amal BELACEL", "Dr Mahmoud BENHARRATS"])
-    with col4:
-        chop_date_input = st.text_input("蓋章日期 (Chop Date)", value="01 Aug 2026")
+    vet_name_input = st.selectbox("官方獸醫 (Official Veterinarian)", ["Dr Djamal OULDAROUS", "Dr Amal BELACEL", "Dr Mahmoud BENHARRATS"])
         
     submitted = st.form_submit_button("生成帶蓋章 PDF (Generate PDF)")
 
@@ -282,9 +265,9 @@ if submitted:
     pdf_file = create_pdf(
         cert_num_input, species_input, weight_input, packages_input, 
         temp_input, date_slaughter, date_production, 
-        vet_name_input, chop_date_input
+        vet_name_input
     )
-    st.success("✅ 渲染成功！程式錯誤已修復。")
+    st.success("✅ PDF 渲染成功！")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
         data=pdf_file,
