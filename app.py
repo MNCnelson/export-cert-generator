@@ -15,19 +15,22 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     
     # 1. 顶部第一行: 复选框、份数 和 证书号
     c.setFont("Helvetica-Bold", 9)
-    # ORIGINAL 复选框
-    c.circle(18*mm, 281*mm, 1.5*mm)
-    c.drawString(22*mm, 280*mm, "ORIGINAL")
-    # DUPLICATA 复选框
-    c.circle(42*mm, 281*mm, 1.5*mm)
-    c.drawString(46*mm, 280*mm, "DUPLICATA")
+    
+    # ORIGINAL 文字与带黑点的复选框
+    c.drawString(15*mm, 280*mm, "ORIGINAL")
+    c.circle(32*mm, 281*mm, 1.5*mm)         # 画外圈
+    c.circle(32*mm, 281*mm, 0.7*mm, fill=1) # 画里面的实心黑点
+    
+    # DUPLICATA 文字与空心复选框
+    c.drawString(42*mm, 280*mm, "DUPLICATA")
+    c.circle(62*mm, 281*mm, 1.5*mm)         # 仅画外圈无黑点
     
     # 右侧的证书号
     c.drawString(135*mm, 280*mm, f"CERTIFICAT N° / CERTIFICATE N° {cert_number}")
     
     # 底部说明
     c.setFont("Helvetica", 7)
-    c.drawString(18*mm, 275*mm, "Nombre total de duplicatas délivrés / Total number of copies issued : 0")
+    c.drawString(15*mm, 275*mm, "Nombre total de duplicatas délivrés / Total number of copies issued : 0")
 
     # 2. 居中机构信息与 Logo
     if os.path.exists("logo.png"):
@@ -237,9 +240,9 @@ with st.form("cert_form"):
 
 if submitted:
     pdf_file = create_pdf(cert_num_input, species_input, weight_input, packages_input, temp_input, date_slaughter, date_production)
-    st.success("✅ 包含完整健康条款和 Logo 的双页 PDF 渲染成功！")
+    st.success("✅ 包含完整排版、黑点复选框和 Logo 的双页 PDF 渲染成功！")
     st.download_button(
-        label="⬇️ 下载完整双页证书",
+        label="⬇️ 下载完整证书",
         data=pdf_file,
         file_name=f"Certificate_{cert_num_input}.pdf",
         mime="application/pdf"
