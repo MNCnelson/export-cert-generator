@@ -9,7 +9,7 @@ def draw_blue_chop(c, x, y, vet_name, chop_date):
     """精準還原圖片中印章日期的字形、大小、格式與傾斜度"""
     c.saveState()
     
-    # 根據獸医姓名匹配底圖
+    # 根據獸醫姓名匹配底圖
     if "Amal" in vet_name:
         stamp_img = "stamp_amal.png"
     elif "Mahmoud" in vet_name:
@@ -19,26 +19,24 @@ def draw_blue_chop(c, x, y, vet_name, chop_date):
         
     c.translate(x, y)
     
-    # 印章整體傾斜角度 ( match 圖片中的傾斜感 )[cite: 28]
+    # 印章整體傾斜角度
     angle = 6.5
     c.rotate(angle)
 
     if os.path.exists(stamp_img):
-        # 1. 正片疊底模式，避免白底遮擋後方表格文字[cite: 28]
+        # 1. 正片疊底模式（Multiply），避免白底遮擋後方表格文字
         c.setBlendMode("Multiply")
         c.drawImage(stamp_img, 0, 0, width=75*mm, height=43*mm, preserveAspectRatio=True, mask='auto')
         
-        # 2. 繪製動態日期（還原圖片字體大小與深藍色印泥質感）[cite: 28]
+        # 2. 繪製動態日期（還原圖片字體大小與深藍色印泥質感）
         c.setBlendMode("Normal")
-        c.setFillColorRGB(0.10, 0.22, 0.52) # 藍墨色[cite: 28]
+        c.setFillColorRGB(0.10, 0.22, 0.52) # 深藍墨色
         
-        # 字體設為 15pt 粗體，符合橡皮章的打印效果[cite: 28]
+        # 使用 15pt 粗體字型還原橡皮章打印感
         c.setFont("Helvetica-Bold", 15)
         
-        # 橫向微調字符間距以還原加寬效果，並精準定位在擦除日期的區域[cite: 28]
-        c.setCharSpace(0.8)
+        # 在擦除日期的區域精準列印傾斜日期
         c.drawCentredString(35*mm, 15*mm, chop_date)
-        c.setCharSpace(0) # 重置字符間距
     else:
         c.setFillColorRGB(1, 0, 0)
         c.setFont("Helvetica", 10)
@@ -276,7 +274,6 @@ with st.form("cert_form"):
     with col3:
         vet_name_input = st.selectbox("官方獸醫 (Official Veterinarian)", ["Dr Djamal OULDAROUS", "Dr Amal BELACEL", "Dr Mahmoud BENHARRATS"])
     with col4:
-        # 預設採用標準英文縮寫日期格式 (例如 01 Aug 2026 或 17 SEP. 2026)[cite: 28]
         chop_date_input = st.text_input("蓋章日期 (Chop Date)", value="01 Aug 2026")
         
     submitted = st.form_submit_button("生成帶蓋章 PDF (Generate PDF)")
@@ -287,7 +284,7 @@ if submitted:
         temp_input, date_slaughter, date_production, 
         vet_name_input, chop_date_input
     )
-    st.success("✅ 渲染成功！印章日期格式、字型大小與傾斜度已完全同步還原！")
+    st.success("✅ 渲染成功！程式錯誤已修復。")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
         data=pdf_file,
