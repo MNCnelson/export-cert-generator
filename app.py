@@ -6,10 +6,10 @@ import io
 import os
 
 def draw_blue_chop(c, x, y, vet_name, chop_date):
-    """使用真实的印章图片底图，并在上方精准叠加动态日期"""
+    """Draws stamp image using Multiply blend mode so white backgrounds don't block underlying text."""
     c.saveState()
     
-    # 1. 根据选择的兽医，匹配对应的印章空白底图文件
+    # Match the stamp image filename to the selected veterinarian
     if "Amal" in vet_name:
         stamp_img = "stamp_amal.png"
     elif "Mahmoud" in vet_name:
@@ -18,26 +18,25 @@ def draw_blue_chop(c, x, y, vet_name, chop_date):
         stamp_img = "stamp_djamal.png"
         
     c.translate(x, y)
-    
-    # 根据实际图片的倾斜程度微调角度，如果您的图片已经是正的，可以将 3 改为 0
-    c.rotate(3) 
+    c.rotate(3) # Slight tilt for hand-stamped appearance
 
-    # 2. 检查图片是否存在并叠加日期
     if os.path.exists(stamp_img):
-        # 贴上真实的印章照片底图 (宽78mm，高45mm)
-        c.drawImage(stamp_img, 0, 0, width=78*mm, height=45*mm, preserveAspectRatio=True, mask='auto')
+        # Multiply blend mode blends white backgrounds transparently into the page
+        c.setBlendMode("Multiply")
+        c.drawImage(stamp_img, 0, 0, width=72*mm, height=42*mm, preserveAspectRatio=True, mask='auto')
         
-        # 设置字体颜色为深蓝色，以匹配真实的印章墨水颜色
+        # Reset blend mode to Normal for sharp date text rendering
+        c.setBlendMode("Normal")
         c.setFillColorRGB(0.12, 0.28, 0.60) 
-        c.setFont("Helvetica-Bold", 14)
+        c.setFont("Helvetica-Bold", 13)
         
-        # 在图片的空白处打印动态生成的日期 (39*mm是水平居中，16*mm是高度，可自行微调)
-        c.drawCentredString(39*mm, 16*mm, chop_date)
+        # Overlay dynamic date onto the stamp's erased date area
+        c.drawCentredString(36*mm, 15*mm, chop_date)
     else:
-        # 错误提示：如果没有上传图片，在原位打印红色警告
+        # Fallback warning if image file is missing on GitHub
         c.setFillColorRGB(1, 0, 0)
         c.setFont("Helvetica", 10)
-        c.drawString(0, 20*mm, f"[系统提示: 请在 GitHub 上传 {stamp_img}]")
+        c.drawString(0, 20*mm, f"[Please upload {stamp_img} to GitHub]")
         
     c.restoreState()
 
@@ -46,14 +45,14 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c = canvas.Canvas(buffer, pagesize=A4)
     
     # ==========================================
-    # PAGE 1: 货物标识与来源 
+    # PAGE 1: Product Identification & Origin
     # ==========================================
     
-    # 顶部复选框 (ORIGINAL 带黑点)
+    # Top Row: Radio circles & Certificate Number
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 280*mm, "ORIGINAL")
     c.circle(32*mm, 281*mm, 1.5*mm)         
-    c.circle(32*mm, 281*mm, 0.7*mm, fill=1) 
+    c.circle(32*mm, 281*mm, 0.7*mm, fill=1) # Filled circle for ORIGINAL
     
     c.drawString(42*mm, 280*mm, "DUPLICATA")
     c.circle(62*mm, 281*mm, 1.5*mm)         
@@ -62,7 +61,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.setFont("Helvetica", 7)
     c.drawString(15*mm, 275*mm, "Nombre total de duplicatas délivrés / Total number of copies issued : 0")
 
-    # 法国官方 Logo (居中)
+    # Centered Marianne Logo
     if os.path.exists("logo.png"):
         c.drawImage("logo.png", 95*mm, 255*mm, width=20*mm, height=20*mm, preserveAspectRatio=True, mask='auto')
 
@@ -165,15 +164,15 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
     
-    # 盖印章 (第1页)
-    draw_blue_chop(c, x=115*mm, y=55*mm, vet_name=vet_name, chop_date=chop_date)
+    # Stamp placement for Page 1 (Positioned right to avoid covering 'HONG KONG' text)
+    draw_blue_chop(c, x=122*mm, y=52*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
     c.drawString(15*mm, 15*mm, "HK VPG AVR 14.doc")
     c.drawString(190*mm, 15*mm, "1/2")
 
     # ==========================================
-    # PAGE 2: 卫生认证条款 
+    # PAGE 2: Health Certification Clauses
     # ==========================================
     c.showPage()
     
@@ -238,8 +237,8 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     text_y -= 5
     c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
 
-    # 盖印章 (第2页)
-    draw_blue_chop(c, x=115*mm, y=35*mm, vet_name=vet_name, chop_date=chop_date)
+    # Stamp placement for Page 2 (Positioned over signature area)
+    draw_blue_chop(c, x=118*mm, y=28*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
     c.drawString(15*mm, 15*mm, "HK VPG AVR 14.DOC")
@@ -250,11 +249,11 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     return buffer
 
 # ==========================
-# Streamlit 网页界面设计
+# Streamlit Web App Interface
 # ==========================
 st.set_page_config(page_title="卫生证书生成系统", layout="centered")
-st.title("📄 官方双页卫生证书生成器 (真实印章版)")
-st.markdown("⚠️ **使用前请确保您已在 GitHub 上传了去除日期的印章底图 (`stamp_amal.png`, `stamp_mahmoud.png`, `stamp_djamal.png`)**")
+st.title("📄 官方双页卫生证书生成器 (透明印章版)")
+st.markdown("⚠️ **提示: 请确保 GitHub 上已上传擦除日期的印章底图 (`stamp_amal.png`, `stamp_mahmoud.png`, `stamp_djamal.png`)**")
 
 with st.form("cert_form"):
     st.subheader("基础信息 / Basic Information")
@@ -273,8 +272,7 @@ with st.form("cert_form"):
     st.subheader("兽医盖章信息 / Veterinarian Stamp")
     col3, col4 = st.columns(2)
     with col3:
-        # 下拉菜单：代码会自动寻找对应的 .png 图片
-        vet_name_input = st.selectbox("官方兽医 (Official Veterinarian)", ["Dr Amal BELACEL", "Dr Mahmoud BENHARRATS", "Dr Djamal OULDAROUS"])
+        vet_name_input = st.selectbox("官方兽医 (Official Veterinarian)", ["Dr Djamal OULDAROUS", "Dr Amal BELACEL", "Dr Mahmoud BENHARRATS"])
     with col4:
         chop_date_input = st.text_input("盖章日期 (Chop Date)", value="17 SEP. 2026")
         
@@ -286,7 +284,7 @@ if submitted:
         temp_input, date_slaughter, date_production, 
         vet_name_input, chop_date_input
     )
-    st.success("✅ 包含真实印章与动态日期的 PDF 渲染成功！")
+    st.success("✅ 渲染成功！底层文字已可清晰显示。")
     st.download_button(
         label="⬇️ 下载完整证书 (Download)",
         data=pdf_file,
