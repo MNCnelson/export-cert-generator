@@ -6,10 +6,10 @@ import io
 import os
 
 def draw_blue_chop(c, x, y, vet_name, chop_date):
-    """画出倾斜印章，并将日期同步旋转相同角度"""
+    """精準還原圖片中印章日期的字形、大小、格式與傾斜度"""
     c.saveState()
     
-    # 根据选择的兽医匹配对应的印章图片
+    # 根據獸医姓名匹配底圖
     if "Amal" in vet_name:
         stamp_img = "stamp_amal.png"
     elif "Mahmoud" in vet_name:
@@ -19,27 +19,30 @@ def draw_blue_chop(c, x, y, vet_name, chop_date):
         
     c.translate(x, y)
     
-    # 设置倾斜角度（角度越大，倾斜越明显）
-    angle = 8
+    # 印章整體傾斜角度 ( match 圖片中的傾斜感 )[cite: 28]
+    angle = 6.5
     c.rotate(angle)
 
     if os.path.exists(stamp_img):
-        # 1. 正片叠底模式（Multiply），使印章白底透明，不遮挡背景文字
+        # 1. 正片疊底模式，避免白底遮擋後方表格文字[cite: 28]
         c.setBlendMode("Multiply")
-        c.drawImage(stamp_img, 0, 0, width=72*mm, height=42*mm, preserveAspectRatio=True, mask='auto')
+        c.drawImage(stamp_img, 0, 0, width=75*mm, height=43*mm, preserveAspectRatio=True, mask='auto')
         
-        # 2. 在旋转后的坐标系下打印日期，使日期与印章完全平行倾斜
+        # 2. 繪製動態日期（還原圖片字體大小與深藍色印泥質感）[cite: 28]
         c.setBlendMode("Normal")
-        c.setFillColorRGB(0.12, 0.28, 0.60) # 对应深蓝色
-        c.setFont("Helvetica-Bold", 13)
+        c.setFillColorRGB(0.10, 0.22, 0.52) # 藍墨色[cite: 28]
         
-        # 调整日期印制位置 (36*mm 表示水平居中，14*mm 表示垂直高度)
-        c.drawCentredString(36*mm, 14*mm, chop_date)
+        # 字體設為 15pt 粗體，符合橡皮章的打印效果[cite: 28]
+        c.setFont("Helvetica-Bold", 15)
+        
+        # 橫向微調字符間距以還原加寬效果，並精準定位在擦除日期的區域[cite: 28]
+        c.setCharSpace(0.8)
+        c.drawCentredString(35*mm, 15*mm, chop_date)
+        c.setCharSpace(0) # 重置字符間距
     else:
-        # 如果找不到图片文件的红字提示
         c.setFillColorRGB(1, 0, 0)
         c.setFont("Helvetica", 10)
-        c.drawString(0, 20*mm, f"[请在 GitHub 上传 {stamp_img}]")
+        c.drawString(0, 20*mm, f"[請在 GitHub 上傳 {stamp_img}]")
         
     c.restoreState()
 
@@ -48,9 +51,8 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c = canvas.Canvas(buffer, pagesize=A4)
     
     # ==========================================
-    # PAGE 1: 货物标识与来源 (Section I, II, III)
+    # PAGE 1: 貨物標識與來源
     # ==========================================
-    
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 280*mm, "ORIGINAL")
     c.circle(32*mm, 281*mm, 1.5*mm)         
@@ -80,7 +82,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawCentredString(105*mm, 225*mm, "CERTIFICATE FOR EXPORTATION OF GAME BIRDS,")
     c.drawCentredString(105*mm, 220*mm, "AND THEIR PRODUCTS FROM FRANCE TO HONG KONG")
 
-    # [Section I]
+    # Section I
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 210*mm, "I. Identification des viandes et produits à base de viande / Identification of games birds and their products:")
     
@@ -121,7 +123,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.line(160*mm, 170*mm, 195*mm, 170*mm)
     c.drawString(162*mm, 171*mm, date_production)
 
-    # [Section II]
+    # Section II
     c.setDash()
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 155*mm, "II. Provenance des viandes et produits à base de viande / Origin of meat and meat products:")
@@ -133,7 +135,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 124*mm, "Ateliers de transformation / Processing plants (adresses, départements et n° d'agrément / addresses, departments and approval numbers):")
     c.drawString(20*mm, 120*mm, "Voir annexe / See appendix")
 
-    # [Section III]
+    # Section III
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 110*mm, "III. Destination des viandes et produits à base de viande / Destination of meat and meat products:")
     c.setFont("Helvetica", 9)
@@ -165,15 +167,15 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
     
-    # 盖印章 (第1页)
-    draw_blue_chop(c, x=122*mm, y=52*mm, vet_name=vet_name, chop_date=chop_date)
+    # Page 1 印章
+    draw_blue_chop(c, x=120*mm, y=50*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
     c.drawString(15*mm, 15*mm, "HK VPG AVR 14.doc")
     c.drawString(190*mm, 15*mm, "1/2")
 
     # ==========================================
-    # PAGE 2: 卫生认证条款 
+    # PAGE 2: 衛生認證條款 
     # ==========================================
     c.showPage()
     
@@ -238,7 +240,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     text_y -= 5
     c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
 
-    # 盖印章 (第2页)
+    # Page 2 印章
     draw_blue_chop(c, x=118*mm, y=28*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -252,31 +254,32 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
 # ==========================
 # Streamlit 界面
 # ==========================
-st.set_page_config(page_title="卫生证书生成系统", layout="centered")
-st.title("📄 官方双页卫生证书生成器 (倾斜印章版)")
+st.set_page_config(page_title="衛生證書生成系統", layout="centered")
+st.title("📄 官方雙頁衛生證書生成器")
 
 with st.form("cert_form"):
-    st.subheader("基础信息 / Basic Information")
-    cert_num_input = st.text_input("证书编号 (Certificate N°)", value="FR-094-26-0349818")
+    st.subheader("基礎資訊 / Basic Information")
+    cert_num_input = st.text_input("證書編號 (Certificate N°)", value="FR-094-26-0349818")
     
     col1, col2 = st.columns(2)
     with col1:
-        species_input = st.selectbox("物种 (Species)", ["CAILLE", "PIGEONNEAU / PIGEON", "LAMB RACK"])
-        packages_input = st.text_input("包装数量 (Packages)", value="10 box")
+        species_input = st.selectbox("物種 (Species)", ["CAILLE", "PIGEONNEAU / PIGEON", "LAMB RACK"])
+        packages_input = st.text_input("包裝數量 (Packages)", value="10 box")
         date_slaughter = st.text_input("屠宰日期 (Date of slaughter)", value="SEE ANNEXE")
     with col2:
-        weight_input = st.text_input("总净重 (Net Weight)", value="30KG")
-        temp_input = st.text_input("储存温度 (Temperature)", value="+0 +4 °C")
-        date_production = st.text_input("生产日期 (Date of production)", value="SEE ANNEXE")
+        weight_input = st.text_input("總淨重 (Net Weight)", value="30KG")
+        temp_input = st.text_input("儲存溫度 (Temperature)", value="+0 +4 °C")
+        date_production = st.text_input("生產日期 (Date of production)", value="SEE ANNEXE")
         
-    st.subheader("兽医盖章信息 / Veterinarian Stamp")
+    st.subheader("獸醫蓋章資訊 / Veterinarian Stamp")
     col3, col4 = st.columns(2)
     with col3:
-        vet_name_input = st.selectbox("官方兽医 (Official Veterinarian)", ["Dr Djamal OULDAROUS", "Dr Amal BELACEL", "Dr Mahmoud BENHARRATS"])
+        vet_name_input = st.selectbox("官方獸醫 (Official Veterinarian)", ["Dr Djamal OULDAROUS", "Dr Amal BELACEL", "Dr Mahmoud BENHARRATS"])
     with col4:
-        chop_date_input = st.text_input("盖章日期 (Chop Date)", value="17 SEP. 2026")
+        # 預設採用標準英文縮寫日期格式 (例如 01 Aug 2026 或 17 SEP. 2026)[cite: 28]
+        chop_date_input = st.text_input("蓋章日期 (Chop Date)", value="01 Aug 2026")
         
-    submitted = st.form_submit_button("生成带盖章 PDF (Generate PDF)")
+    submitted = st.form_submit_button("生成帶蓋章 PDF (Generate PDF)")
 
 if submitted:
     pdf_file = create_pdf(
@@ -284,9 +287,9 @@ if submitted:
         temp_input, date_slaughter, date_production, 
         vet_name_input, chop_date_input
     )
-    st.success("✅ 渲染成功！印章与日期已完全同步倾斜。")
+    st.success("✅ 渲染成功！印章日期格式、字型大小與傾斜度已完全同步還原！")
     st.download_button(
-        label="⬇️ 下载完整证书 (Download)",
+        label="⬇️ 下載完整證書 (Download)",
         data=pdf_file,
         file_name=f"Certificate_{cert_num_input}.pdf",
         mime="application/pdf"
