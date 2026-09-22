@@ -10,25 +10,25 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
     c.saveState()
     c.translate(x, y)
     
-    # Official Ink Blue Color (RGB)
-    c.setStrokeColorRGB(0.10, 0.25, 0.55)
-    c.setFillColorRGB(0.10, 0.25, 0.55)
+    # Official Stamp Blue Color
+    c.setStrokeColorRGB(0.12, 0.28, 0.60)
+    c.setFillColorRGB(0.12, 0.28, 0.60)
     
     # Rotation angle matching official stamp
-    c.rotate(5.5)
+    c.rotate(6.0)
 
-    # 1. Main Stamp Rectangle Box
+    # 1. Main Stamp Outer Box
     c.setLineWidth(1.2)
     c.rect(0, 0, 76*mm, 44*mm)
 
-    # 2. Doctor Name & Qualification Title
+    # 2. Doctor Name & Title
     c.setFont("Times-Bold", 16)
     c.drawCentredString(38*mm, 35*mm, vet_name)
     
     c.setFont("Times-Italic", 13)
     c.drawCentredString(38*mm, 28*mm, "Vétérinaire Officiel")
 
-    # 3. Dynamic Date Overlay (Customizable via Streamlit UI)
+    # 3. Dynamic Date Overlay
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(35*mm, 15*mm, chop_date)
 
@@ -52,10 +52,10 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
     # 5. Overlapping Handwritten Signature Stroke Lines
     c.setLineWidth(0.9)
     p = c.beginPath()
-    p.moveTo(-10*mm, 4*mm)
-    p.curveTo(15*mm, 12*mm, 45*mm, 21*mm, 78*mm, 28*mm)
-    p.moveTo(-8*mm, -2*mm)
-    p.curveTo(18*mm, 8*mm, 48*mm, 18*mm, 76*mm, 25*mm)
+    p.moveTo(-12*mm, -5*mm)
+    p.curveTo(15*mm, 8*mm, 45*mm, 18*mm, 78*mm, 26*mm)
+    p.moveTo(-10*mm, -10*mm)
+    p.curveTo(18*mm, 4*mm, 48*mm, 15*mm, 76*mm, 23*mm)
     c.drawPath(p, stroke=1, fill=0)
 
     c.restoreState()
@@ -182,8 +182,8 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
     
-    # Page 1 Official Stamp Overlay
-    draw_official_stamp(c, x=118*mm, y=50*mm, vet_name=vet_name, chop_date=chop_date)
+    # Page 1 Official Stamp Overlay (Adjusted x position to align right)
+    draw_official_stamp(c, x=128*mm, y=48*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
     c.drawString(15*mm, 15*mm, "HK VPG AVR 14.doc")
@@ -256,7 +256,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
 
     # Page 2 Official Stamp Overlay
-    draw_official_stamp(c, x=118*mm, y=28*mm, vet_name=vet_name, chop_date=chop_date)
+    draw_official_stamp(c, x=120*mm, y=28*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
     c.drawString(15*mm, 15*mm, "HK VPG AVR 14.DOC")
@@ -295,7 +295,6 @@ with st.form("cert_form"):
             "Dr Amal BELACEL"
         ])
     with col4:
-        # Dynamic date input field for custom date selection
         chop_date_input = st.text_input("蓋章日期 (Chop Date)", value="01 Aug 2026")
         
     submitted = st.form_submit_button("生成帶蓋章 PDF (Generate PDF)")
@@ -306,7 +305,7 @@ if submitted:
         temp_input, date_slaughter, date_production, 
         vet_name_input, chop_date_input
     )
-    st.success("✅ PDF 渲染成功！印章格式、傾斜度與蓋章日期已完美匹配！")
+    st.success("✅ PDF 渲染成功！印章對齊與動態日期已完美匹配！")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
         data=pdf_file,
