@@ -1,333 +1,39 @@
-import streamlit as st
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
-import io
-import os
-
 def draw_blue_chop(c, x, y, vet_name, chop_date):
-    """Highly accurate blue stamp with realistic Bezier curve signatures."""
+    """使用真实的印章图片底图，并在上方叠加动态日期"""
     c.saveState()
+    
+    # 根据下拉菜单选择，匹配对应的印章图片文件名
+    if "Amal" in vet_name:
+        stamp_img = "stamp_amal.png"
+    elif "Mahmoud" in vet_name:
+        stamp_img = "stamp_mahmoud.png"
+    else:
+        stamp_img = "stamp_djamal.png"
+        
+    # 定位到页面上该盖章的坐标
     c.translate(x, y)
     
-    # Official Ink Blue[cite: 22]
-    c.setStrokeColorRGB(0.12, 0.28, 0.60)
-    c.setFillColorRGB(0.12, 0.28, 0.60)
-    
-    if "Amal" in vet_name:
-        # Dr Amal BELACEL Styling[cite: 22]
-        c.rotate(1) 
-        c.setLineWidth(1)
-        c.rect(0, 0, 78*mm, 42*mm) 
-        
-        c.setFont("Helvetica-Bold", 16)
-        c.drawCentredString(39*mm, 34*mm, vet_name)
-        c.setFont("Helvetica-Oblique", 14)
-        c.drawCentredString(39*mm, 27*mm, "Vétérinaire Officiel")
-        c.setFont("Helvetica-Bold", 14)
-        c.drawCentredString(39*mm, 14*mm, chop_date)
-        
-        # REALISTIC CURSIVE SIGNATURE using Bezier Curves[cite: 22]
-        c.setLineWidth(0.8)
-        p = c.beginPath()
-        p.moveTo(10*mm, 15*mm) # Start mid-left
-        # Loop down to bottom
-        p.curveTo(15*mm, 15*mm, 22*mm, -5*mm, 26*mm, -10*mm)
-        # Shoot up to first tall loop (crossing Amal)
-        p.curveTo(28*mm, -25*mm, 24*mm, 40*mm, 30*mm, 40*mm)
-        # Come down and loop
-        p.curveTo(36*mm, 40*mm, 34*mm, -15*mm, 40*mm, -15*mm)
-        # Shoot up to second loop (crossing BELACEL)
-        p.curveTo(46*mm, -15*mm, 42*mm, 30*mm, 45*mm, 30*mm)
-        # Come down, loop, and tail off to the right
-        p.curveTo(48*mm, 30*mm, 52*mm, -15*mm, 58*mm, -10*mm)
-        p.curveTo(65*mm, -5*mm, 70*mm, 10*mm, 75*mm, 15*mm)
-        c.drawPath(p, stroke=1, fill=0)
+    # 稍微倾斜，让印章看起来像是手工盖上去的
+    c.rotate(3) 
 
+    # 检查 GitHub 仓库里有没有上传对应的印章底图
+    if os.path.exists(stamp_img):
+        # 1. 贴上真实的印章照片底图 (宽约78mm，高约45mm，可根据您的实际裁切比例微调)
+        c.drawImage(stamp_img, 0, 0, width=78*mm, height=45*mm, preserveAspectRatio=True, mask='auto')
+        
+        # 2. 在印章图片的特定坐标上，印上动态生成的日期
+        # 设置字体颜色为与印章相近的深蓝色
+        c.setFillColorRGB(0.12, 0.28, 0.60) 
+        c.setFont("Helvetica-Bold", 14)
+        
+        # 调整下方坐标 (39*mm 是水平居中，16*mm 是距离底部的垂直高度)
+        # 如果您发现生成的日期偏高或偏低，请修改 16*mm 这个数字
+        c.drawCentredString(39*mm, 16*mm, chop_date)
+        
     else:
-        # Dr Mahmoud BENHARRATS Styling[cite: 21]
-        c.rotate(3) 
-        c.setLineWidth(1)
-        c.rect(0, 0, 78*mm, 40*mm)
+        # 如果忘记上传图片，在 PDF 上显示红字提示
+        c.setFillColorRGB(1, 0, 0)
+        c.setFont("Helvetica", 10)
+        c.drawString(0, 20*mm, f"[请在 GitHub 上传 {stamp_img} 图片文件]")
         
-        c.setFont("Helvetica-Bold", 15)
-        c.drawCentredString(39*mm, 32*mm, vet_name)
-        c.setFont("Helvetica-Oblique", 13)
-        c.drawCentredString(39*mm, 26*mm, "Vétérinaire Officiel")
-        c.setFont("Helvetica-Bold", 14)
-        c.drawCentredString(39*mm, 15*mm, chop_date)
-        
-        # Straight line signature[cite: 21]
-        c.setLineWidth(0.7)
-        c.line(-5*mm, 2*mm, 85*mm, 26*mm)
-        c.line(-5*mm, 0*mm, 85*mm, 23*mm)
-
-    # DETAILED ROUND SEAL[cite: 22]
-    seal_x, seal_y = 65*mm, 10*mm
-    c.setLineWidth(1)
-    c.circle(seal_x, seal_y, 11*mm) # Outer ring
-    c.setLineWidth(0.5)
-    c.circle(seal_x, seal_y, 10.2*mm) # Inner ring
-    
-    # Text stacked inside the seal[cite: 22]
-    c.setFont("Helvetica-Bold", 4.5)
-    c.drawCentredString(seal_x, seal_y + 5.5*mm, "REPUBLIQUE FRANCAISE")
-    c.drawCentredString(seal_x, seal_y + 2*mm, "SERVICES")
-    c.drawCentredString(seal_x, seal_y - 1*mm, "VETERINAIRES")
-    c.drawCentredString(seal_x, seal_y - 4*mm, "DU")
-    c.drawCentredString(seal_x, seal_y - 7*mm, "VAL-DE-MARNE")
-    
-    c.setFont("Helvetica-Bold", 3.5)
-    c.drawCentredString(seal_x, seal_y - 9.2*mm, "MINISTERE DE L'AGRICULTURE")
-    
     c.restoreState()
-
-def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production, vet_name, chop_date):
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    
-    # ==========================================
-    # PAGE 1: 货物标识与来源 (Section I, II, III)
-    # ==========================================
-    
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(15*mm, 280*mm, "ORIGINAL")
-    c.circle(32*mm, 281*mm, 1.5*mm)         
-    c.circle(32*mm, 281*mm, 0.7*mm, fill=1) 
-    
-    c.drawString(42*mm, 280*mm, "DUPLICATA")
-    c.circle(62*mm, 281*mm, 1.5*mm)         
-    
-    c.drawString(135*mm, 280*mm, f"CERTIFICAT N° / CERTIFICATE N° {cert_number}")
-    c.setFont("Helvetica", 7)
-    c.drawString(15*mm, 275*mm, "Nombre total de duplicatas délivrés / Total number of copies issued : 0")
-
-    if os.path.exists("logo.png"):
-        c.drawImage("logo.png", 95*mm, 255*mm, width=20*mm, height=20*mm, preserveAspectRatio=True, mask='auto')
-
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(65*mm, 265*mm, "REPUBLIQUE")
-    c.drawString(120*mm, 265*mm, "FRANCAISE")
-    
-    c.setFont("Helvetica-Bold", 10)
-    c.drawCentredString(105*mm, 250*mm, "DIRECTION GENERALE DE L'ALIMENTATION")
-    c.drawCentredString(105*mm, 240*mm, "CERTIFICAT POUR L'EXPORTATION A DESTINATION DE HONG KONG")
-    c.drawCentredString(105*mm, 235*mm, "DE VIANDES FRAICHES DE GIBIER A PLUME, ET DE PRODUITS A BASE DE")
-    c.drawCentredString(105*mm, 230*mm, "CES VIANDES EN PROVENANCE DE FRANCE")
-    
-    c.setFont("Helvetica-Oblique", 9)
-    c.drawCentredString(105*mm, 225*mm, "CERTIFICATE FOR EXPORTATION OF GAME BIRDS,")
-    c.drawCentredString(105*mm, 220*mm, "AND THEIR PRODUCTS FROM FRANCE TO HONG KONG")
-
-    # [Section I]
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(15*mm, 210*mm, "I. Identification des viandes et produits à base de viande / Identification of games birds and their products:")
-    
-    c.setFont("Helvetica", 9)
-    c.drawString(20*mm, 202*mm, "a) Espèce animale / Species:")
-    c.setDash(1, 2)
-    c.line(65*mm, 202*mm, 195*mm, 202*mm)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(70*mm, 203*mm, species) 
-    
-    c.setFont("Helvetica", 9)
-    c.drawString(20*mm, 194*mm, "b) Nature des pièces / Nature of joints:")
-    c.line(75*mm, 194*mm, 195*mm, 194*mm)
-    c.drawString(80*mm, 195*mm, "SEE ANNEXE")
-    
-    c.drawString(20*mm, 186*mm, "c) Nombre de pièces ou d'unités d'emballage / Number of joints or packages:")
-    c.line(135*mm, 186*mm, 195*mm, 186*mm)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(140*mm, 187*mm, packages) 
-    
-    c.setFont("Helvetica", 9)
-    c.drawString(20*mm, 178*mm, "d) Température d'entreposage / Temperature of storage:")
-    c.line(100*mm, 178*mm, 140*mm, 178*mm)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(105*mm, 179*mm, temp) 
-    
-    c.setFont("Helvetica", 9)
-    c.drawString(145*mm, 178*mm, "e) Poids net/Net weight:")
-    c.line(180*mm, 178*mm, 195*mm, 178*mm)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(182*mm, 179*mm, weight) 
-    
-    c.setFont("Helvetica", 9)
-    c.drawString(20*mm, 170*mm, "f) Dates d'abattage/ Dates of slaughter:")
-    c.line(75*mm, 170*mm, 120*mm, 170*mm)
-    c.drawString(80*mm, 171*mm, date_slaughter)
-    c.drawString(125*mm, 170*mm, "Date de production:")
-    c.line(160*mm, 170*mm, 195*mm, 170*mm)
-    c.drawString(162*mm, 171*mm, date_production)
-
-    # [Section II]
-    c.setDash()
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(15*mm, 155*mm, "II. Provenance des viandes et produits à base de viande / Origin of meat and meat products:")
-    c.setFont("Helvetica", 8)
-    c.drawString(20*mm, 148*mm, "Abattoirs/Slaughter plants (adresses, départements et n° d'agrément / addresses, departments and approval numbers):")
-    c.drawString(20*mm, 144*mm, "Voir annexe / See appendix")
-    c.drawString(20*mm, 136*mm, "Ateliers de découpe / Cutting plants (adresses, départements et n° d'agrément / addresses, departments and approval numbers):")
-    c.drawString(20*mm, 132*mm, "Voir annexe / See appendix")
-    c.drawString(20*mm, 124*mm, "Ateliers de transformation / Processing plants (adresses, départements et n° d'agrément / addresses, departments and approval numbers):")
-    c.drawString(20*mm, 120*mm, "Voir annexe / See appendix")
-
-    # [Section III]
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(15*mm, 110*mm, "III. Destination des viandes et produits à base de viande / Destination of meat and meat products:")
-    c.setFont("Helvetica", 9)
-    c.drawString(20*mm, 103*mm, "Les viandes et produits à base de viande sont expédiés de / The meat and meat products are dispatched from:")
-    c.drawString(20*mm, 95*mm, "(Lieu d'expédition / Place of Dispatch)..........................................................................")
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(80*mm, 96*mm, "94-RUNGIS")
-    
-    c.setFont("Helvetica", 9)
-    c.drawString(20*mm, 87*mm, "À / To (Pays et Lieu de destination / Country and place of destination):")
-    c.line(115*mm, 87*mm, 195*mm, 87*mm)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(120*mm, 88*mm, "HONG KONG")
-
-    c.setFont("Helvetica", 9)
-    c.drawString(20*mm, 79*mm, "Par les moyens de transport suivant / By the following means of transport:")
-    c.line(125*mm, 79*mm, 195*mm, 79*mm)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(130*mm, 80*mm, "BY PLANE")
-
-    c.setFont("Helvetica", 9)
-    c.drawString(20*mm, 71*mm, "Nom et adresse de l'expéditeur / Name and address of consignor:")
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(20*mm, 66*mm, "SOCIETE HUGUENIN 32 Avenue de la Villette 94637 Rungis Cedex")
-
-    c.setFont("Helvetica", 9)
-    c.drawString(20*mm, 58*mm, "Nom et adresse du destinataire / Name and address of consignee:")
-    c.setFont("Helvetica-Bold", 9)
-    c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
-    c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
-    
-    # Stamp on Page 1
-    draw_blue_chop(c, x=115*mm, y=55*mm, vet_name=vet_name, chop_date=chop_date)
-
-    c.setFont("Helvetica", 8)
-    c.drawString(15*mm, 15*mm, "HK VPG AVR 14.doc")
-    c.drawString(190*mm, 15*mm, "1/2")
-
-    # ==========================================
-    # PAGE 2: 卫生认证条款 (Section IV)
-    # ==========================================
-    c.showPage()
-    
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(160*mm, 280*mm, f"CERTIFICAT N° {cert_number}")
-    c.drawString(15*mm, 260*mm, "IV. ATTESTATION SANITAIRE / HEALTH CERTIFICATION:")
-    
-    c.setFont("Helvetica", 9)
-    c.drawString(15*mm, 250*mm, "Je soussigné, vétérinaire officiel, certifie que / I, official veterinarian, hereby certify that:")
-    
-    text_y = 240
-    line_height = 4
-    
-    lines = [
-        "1- L'ensemble des viandes et produits est issu d'oiseaux qui ont été gardés dans un pays, une zone ou un compartiment",
-        "indemne de maladie de Newcastle et d'Influenza aviaire à déclaration obligatoire (IADO) depuis leur éclosion ou depuis",
-        "les 21 derniers jours:",
-        "The entire consignment of meat/products derived from birds which had been kept in a Newcastle disease and notifiable",
-        "avian influenza (NAI) free country, zone or compartment since they were hatched or for the past 21 days;",
-        "Et/And",
-        "2- Les oiseaux dont sont issus les viandes / produits ont été abattus dans des abattoirs agréés dans lesquels il n'y a pas eu",
-        "de signes caractéristiques de l'IADO depuis 21 jours. Ils ont été soumis à une inspection ante et post mortem avec",
-        "résultat favorable concernant l'IADO et d'autres maladies contagieuses. Les volailles ont été abattues dans un abattoir",
-        "qui n'est pas situé dans une zone (circonscription administrative) infectée par la MNC ou l'IADO.",
-        "The entire consignment of meat / products derived from birds which had been slaughtered in an approved abattoir in",
-        "which there had been no evidence of NAI in the past 21 days. The birds had been subject to ante-mortem and post-",
-        "mortem inspections for NAI and other contagious diseases with favourable results. The poultry were slaughtered in an",
-        "abattoir not situated in a ND or NAI infected zone (administrative constituency).",
-        "3- Les viandes / produits faisant l'objet du présent envoi sont propres à la consommation humaine, même à l'état cru.",
-        "The meat/products of the current shipment are fit for human consumption, even in a raw state.",
-        "4- L'établissement de provenance des viandes ou produits à base de viande est agréé pour l'exportation par les autorités",
-        "françaises compétentes et inspecté par les vétérinaires inspecteurs officiels. Les viandes / produits ont été soumis à des",
-        "tests de recherche de résidus de médicaments ou chimiques et organismes et substances pouvant être pathogenes pour",
-        "l'être humain. Les résultats de ces tests sont en conformité avec les standards européens en vigueur.",
-        "The processing plants from which meat / products originate have been authorised by the Government of France for",
-        "exports and is inspected by official veterinary inspectors. The poultry meat / products have been subject to testing",
-        "programmes for drug / chemical residues and harmful organisms and substances which may be harmful to human",
-        "health. The results of the testing programmes meet the EU performance standards.",
-        "5- Les viandes / produits ont été manipulés de façon à éviter tout risque de contamination jusqu'à l'embarquement. Le",
-        "conditionnement et l'emballage des viandes/produits ont été réalisés à l'aide de matériaux agréés et propres.",
-        "The exported meat / products have been handled in such ways as to keep it from being contaminated with any causative",
-        "agents of animal infectious diseases until the shipment. Clean and sanitary wrapping and/or containers such as card",
-        "board boxes shall be used to pack the exported meat/products.",
-        "6- Les emballages portent une marque de salubrité prouvant que les viandes / produits proviennent d'établissements agréés.",
-        "The cases carry a mark to prove that the meat/products come from approved plants."
-    ]
-    
-    for line in lines:
-        if line.startswith(str(tuple(range(1, 10)))): 
-            text_y -= 2
-        c.drawString(15*mm, text_y*mm, line)
-        text_y -= line_height
-
-    text_y -= 15
-    c.drawString(15*mm, text_y*mm, "Fait à / Done at ..............................................................   Le / On the ..............................................................")
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(50*mm, (text_y+1)*mm, "RUNGIS")
-    text_y -= 10
-    c.setFont("Helvetica", 9)
-    c.drawString(15*mm, text_y*mm, "Titre du signataire / Qualification")
-    c.drawString(85*mm, text_y*mm, "Signature du vétérinaire officiel / Signature of the official veterinarian")
-    text_y -= 5
-    c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
-
-    # Stamp on Page 2
-    draw_blue_chop(c, x=115*mm, y=35*mm, vet_name=vet_name, chop_date=chop_date)
-
-    c.setFont("Helvetica", 8)
-    c.drawString(15*mm, 15*mm, "HK VPG AVR 14.DOC")
-    c.drawString(190*mm, 15*mm, "2/2")
-
-    c.save()
-    buffer.seek(0)
-    return buffer
-
-# ==========================
-# Streamlit Web App Interface
-# ==========================
-st.set_page_config(page_title="卫生证书生成系统", layout="centered")
-st.title("📄 官方双页卫生证书生成器")
-
-with st.form("cert_form"):
-    st.subheader("基础信息 / Basic Information")
-    cert_num_input = st.text_input("证书编号 (Certificate N°)", value="FR-094-26-0349818")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        species_input = st.selectbox("物种 (Species)", ["CAILLE", "PIGEONNEAU / PIGEON", "LAMB RACK"])
-        packages_input = st.text_input("包装数量 (Packages)", value="10 box")
-        date_slaughter = st.text_input("屠宰日期 (Date of slaughter)", value="SEE ANNEXE")
-    with col2:
-        weight_input = st.text_input("总净重 (Net Weight)", value="30KG")
-        temp_input = st.text_input("储存温度 (Temperature)", value="+0 +4 °C")
-        date_production = st.text_input("生产日期 (Date of production)", value="SEE ANNEXE")
-        
-    st.subheader("兽医盖章信息 / Veterinarian Stamp")
-    col3, col4 = st.columns(2)
-    with col3:
-        # Added Dr Amal BELACEL to trigger the realistic signature
-        vet_name_input = st.selectbox("官方兽医 (Official Veterinarian)", ["Dr Amal BELACEL", "Dr Mahmoud BENHARRATS", "Dr Djamal OULDAROUS"])
-    with col4:
-        chop_date_input = st.text_input("盖章日期 (Chop Date)", value="17 SEP. 2026")
-        
-    submitted = st.form_submit_button("生成带盖章 PDF (Generate PDF)")
-
-if submitted:
-    pdf_file = create_pdf(
-        cert_num_input, species_input, weight_input, packages_input, 
-        temp_input, date_slaughter, date_production, 
-        vet_name_input, chop_date_input
-    )
-    st.success("✅ 包含高精度真实签名的 PDF 渲染成功！")
-    st.download_button(
-        label="⬇️ 下载完整证书 (Download)",
-        data=pdf_file,
-        file_name=f"Certificate_{cert_num_input}.pdf",
-        mime="application/pdf"
-    )
