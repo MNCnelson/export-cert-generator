@@ -4,13 +4,43 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 import io
 import os
+import math
+
+def draw_curved_text(c, text, cx, cy, radius, start_angle, end_angle, font_name, font_size, is_bottom=False):
+    """沿著圓圈弧度繪製彎曲文字的向量算法"""
+    c.setFont(font_name, font_size)
+    num_chars = len(text)
+    if num_chars == 0:
+        return
+    
+    angle_step = (end_angle - start_angle) / max(num_chars - 1, 1)
+    
+    for i, char in enumerate(text):
+        angle_deg = start_angle + i * angle_step
+        angle_rad = math.radians(angle_deg)
+        
+        # 計算字母在圓弧上的 X, Y 座標
+        x = cx + radius * math.cos(angle_rad)
+        y = cy + radius * math.sin(angle_rad)
+        
+        c.saveState()
+        c.translate(x, y)
+        
+        # 旋轉每個字母使其切合弧線
+        if is_bottom:
+            c.rotate(angle_deg + 90)
+        else:
+            c.rotate(angle_deg - 90)
+            
+        c.drawCentredString(0, 0, char)
+        c.restoreState()
 
 def draw_official_stamp(c, x, y, vet_name, chop_date):
-    """繪製 1:1 高精度向量官方印章（含豐富簽名線條與精確圓印排版）"""
+    """1:1 高精度向量印章（含真實圓弧彎曲文字排版）"""
     c.saveState()
     c.translate(x, y)
     
-    # 官方印章深藍色
+    # 印章深藍色
     c.setStrokeColorRGB(0.10, 0.25, 0.55)
     c.setFillColorRGB(0.10, 0.25, 0.55)
     
@@ -39,30 +69,42 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
     c.setLineWidth(0.5)
     c.circle(seal_x, seal_y, 10.0*mm)   # 內圈
 
-    # 圓印內部文字 (嚴格按官方比例佈局)
-    c.setFont("Helvetica-Bold", 4.0)
-    c.drawCentredString(seal_x, seal_y + 6.2*mm, "REPUBLIQUE FRANCAISE")
-    c.drawCentredString(seal_x, seal_y + 2.8*mm, "SERVICES")
-    c.drawCentredString(seal_x, seal_y - 0.5*mm, "VETERINAIRES")
-    c.drawCentredString(seal_x, seal_y - 3.8*mm, "DU")
-    c.drawCentredString(seal_x, seal_y - 6.8*mm, "VAL-DE-MARNE")
+    # --- 圓圈內部精準文字排版 ---
     
-    c.setFont("Helvetica-Bold", 3.0)
-    c.drawCentredString(seal_x, seal_y - 9.0*mm, "MINISTERE DE L'AGRICULTURE")
+    # A. 頂部弧形文字: REPUBLIQUE FRANCAISE (沿內圈上方弧度彎曲)
+    draw_curved_text(
+        c, text="REPUBLIQUE FRANCAISE", 
+        cx=seal_x, cy=seal_y, radius=8.2*mm, 
+        start_angle=140, end_angle=40, 
+        font_name="Helvetica-Bold", font_size=3.8, is_bottom=False
+    )
+    
+    # B. 中間多行平鋪文字 (間距嚴格對齊原圖)
+    c.setFont("Helvetica-Bold", 4.2)
+    c.drawCentredString(seal_x, seal_y + 2.5*mm, "SERVICES")
+    c.drawCentredString(seal_x, seal_y - 1.2*mm, "VETERINAIRES")
+    
+    c.setFont("Helvetica-Bold", 4.0)
+    c.drawCentredString(seal_x, seal_y - 4.5*mm, "DU")
+    c.drawCentredString(seal_x, seal_y - 7.2*mm, "VAL-DE-MARNE")
+    
+    # C. 底部弧形文字: MINISTERE DE L'AGRICULTURE (沿內圈下方弧度彎曲)
+    draw_curved_text(
+        c, text="MINISTERE DE L'AGRICULTURE", 
+        cx=seal_x, cy=seal_y, radius=8.5*mm, 
+        start_angle=220, end_angle=320, 
+        font_name="Helvetica-Bold", font_size=2.8, is_bottom=True
+    )
 
-    # 5. 豐富的手寫連筆簽名線條 (多重自然弧線)
+    # 5. 豐富的手寫連筆簽名線條
     c.setLineWidth(0.8)
     p = c.beginPath()
-    # 第一條主線
     p.moveTo(-15*mm, -8*mm)
     p.curveTo(12*mm, 6*mm, 42*mm, 16*mm, 78*mm, 26*mm)
-    # 第二條平行線（帶手寫起筆鉤）
     p.moveTo(-12*mm, -13*mm)
     p.curveTo(15*mm, 2*mm, 45*mm, 13*mm, 76*mm, 23*mm)
-    # 第三條連筆微弧線（增加線條豐富度）
     p.moveTo(25*mm, 10*mm)
     p.curveTo(35*mm, 16*mm, 48*mm, 18*mm, 52*mm, 19.5*mm)
-    
     c.drawPath(p, stroke=1, fill=0)
 
     c.restoreState()
@@ -188,7 +230,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
     
-    # Page 1 蓋章（右移對齊，避開左側文字）
+    # Page 1 蓋章
     draw_official_stamp(c, x=128*mm, y=48*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -311,7 +353,7 @@ if submitted:
         temp_input, date_slaughter, date_production, 
         vet_name_input, chop_date_input
     )
-    st.success("✅ PDF 渲染成功！印章內部文字排版與筆跡線條已微調完善。")
+    st.success("✅ PDF 渲染成功！圓圈文字現已成功實現弧形曲面彎曲對齊！")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
         data=pdf_file,
