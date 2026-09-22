@@ -5,7 +5,47 @@ from reportlab.lib.units import mm
 import io
 import os
 
-def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production):
+def draw_blue_chop(c, x, y, vet_name, chop_date):
+    """Function to draw the official blue stamp with dynamic text and signature."""
+    c.saveState()
+    c.translate(x, y)
+    c.rotate(3) # Slight tilt for a realistic stamped look
+    
+    # Set color to Official Ink Blue
+    c.setStrokeColorRGB(0.15, 0.30, 0.60)
+    c.setFillColorRGB(0.15, 0.30, 0.60)
+    c.setLineWidth(1)
+    
+    # Draw the main rectangular box
+    c.rect(0, 0, 75*mm, 45*mm)
+    
+    # Draw the text inside the stamp
+    c.setFont("Helvetica-Bold", 14)
+    c.drawCentredString(37.5*mm, 35*mm, vet_name)
+    c.setFont("Helvetica-Oblique", 12)
+    c.drawCentredString(37.5*mm, 28*mm, "Vétérinaire Officiel")
+    
+    # Dynamic Date
+    c.setFont("Helvetica-Bold", 13)
+    c.drawCentredString(37.5*mm, 18*mm, chop_date)
+    
+    # Simulate the small round seal inside the box
+    seal_x, seal_y = 58*mm, 13*mm
+    c.circle(seal_x, seal_y, 9*mm)
+    c.circle(seal_x, seal_y, 8.5*mm)
+    c.setFont("Helvetica-Bold", 5)
+    c.drawCentredString(seal_x, seal_y + 3*mm, "REPUBLIQUE FRANCAISE")
+    c.drawCentredString(seal_x, seal_y - 1*mm, "SERVICES VETERINAIRES")
+    c.drawCentredString(seal_x, seal_y - 4*mm, "VAL-DE-MARNE")
+    
+    # Draw the simulated overlapping signature lines
+    c.setLineWidth(0.8)
+    c.line(-5*mm, 5*mm, 85*mm, 30*mm)
+    c.line(-2*mm, 2*mm, 82*mm, 27*mm)
+    
+    c.restoreState()
+
+def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production, vet_name, chop_date):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     
@@ -15,20 +55,14 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     
     # 1. 顶部第一行: 复选框、份数 和 证书号
     c.setFont("Helvetica-Bold", 9)
-    
-    # ORIGINAL 文字与带黑点的复选框
     c.drawString(15*mm, 280*mm, "ORIGINAL")
-    c.circle(32*mm, 281*mm, 1.5*mm)         # 画外圈
-    c.circle(32*mm, 281*mm, 0.7*mm, fill=1) # 画里面的实心黑点
+    c.circle(32*mm, 281*mm, 1.5*mm)         
+    c.circle(32*mm, 281*mm, 0.7*mm, fill=1) 
     
-    # DUPLICATA 文字与空心复选框
     c.drawString(42*mm, 280*mm, "DUPLICATA")
-    c.circle(62*mm, 281*mm, 1.5*mm)         # 仅画外圈无黑点
+    c.circle(62*mm, 281*mm, 1.5*mm)         
     
-    # 右侧的证书号
     c.drawString(135*mm, 280*mm, f"CERTIFICAT N° / CERTIFICATE N° {cert_number}")
-    
-    # 底部说明
     c.setFont("Helvetica", 7)
     c.drawString(15*mm, 275*mm, "Nombre total de duplicatas délivrés / Total number of copies issued : 0")
 
@@ -42,8 +76,6 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     
     c.setFont("Helvetica-Bold", 10)
     c.drawCentredString(105*mm, 250*mm, "DIRECTION GENERALE DE L'ALIMENTATION")
-    
-    c.setFont("Helvetica-Bold", 10)
     c.drawCentredString(105*mm, 240*mm, "CERTIFICAT POUR L'EXPORTATION A DESTINATION DE HONG KONG")
     c.drawCentredString(105*mm, 235*mm, "DE VIANDES FRAICHES DE GIBIER A PLUME, ET DE PRODUITS A BASE DE")
     c.drawCentredString(105*mm, 230*mm, "CES VIANDES EN PROVENANCE DE FRANCE")
@@ -136,6 +168,9 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.setFont("Helvetica-Bold", 9)
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
+    
+    # 盖章 - 第1页 (Stamp on Page 1)
+    draw_blue_chop(c, x=120*mm, y=55*mm, vet_name=vet_name, chop_date=chop_date)
 
     # 页脚
     c.setFont("Helvetica", 8)
@@ -208,6 +243,9 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     text_y -= 5
     c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
 
+    # 盖章 - 第2页 (Stamp on Page 2)
+    draw_blue_chop(c, x=135*mm, y=25*mm, vet_name=vet_name, chop_date=chop_date)
+
     c.setFont("Helvetica", 8)
     c.drawString(15*mm, 15*mm, "HK VPG AVR 14.DOC")
     c.drawString(190*mm, 15*mm, "2/2")
@@ -220,10 +258,10 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
 # Streamlit 网页界面设计
 # ==========================
 st.set_page_config(page_title="卫生证书生成系统", layout="centered")
-
 st.title("📄 官方双页卫生证书生成器")
 
 with st.form("cert_form"):
+    st.subheader("基础信息 / Basic Information")
     cert_num_input = st.text_input("证书编号 (Certificate N°)", value="FR-094-26-0349818")
     
     col1, col2 = st.columns(2)
@@ -236,13 +274,26 @@ with st.form("cert_form"):
         temp_input = st.text_input("储存温度 (Temperature)", value="+0 +4 °C")
         date_production = st.text_input("生产日期 (Date of production)", value="SEE ANNEXE")
         
-    submitted = st.form_submit_button("生成 PDF")
+    st.subheader("兽医盖章信息 / Veterinarian Stamp")
+    col3, col4 = st.columns(2)
+    with col3:
+        # 下拉菜单选择盖章的兽医名字
+        vet_name_input = st.selectbox("官方兽医 (Official Veterinarian)", ["Dr Mahmoud BENHARRATS", "Dr Djamal OULDAROUS"])
+    with col4:
+        # 输入盖章显示的日期
+        chop_date_input = st.text_input("盖章日期 (Chop Date)", value="17 SEP. 2026")
+        
+    submitted = st.form_submit_button("生成带盖章 PDF (Generate PDF)")
 
 if submitted:
-    pdf_file = create_pdf(cert_num_input, species_input, weight_input, packages_input, temp_input, date_slaughter, date_production)
-    st.success("✅ 包含完整排版、黑点复选框和 Logo 的双页 PDF 渲染成功！")
+    pdf_file = create_pdf(
+        cert_num_input, species_input, weight_input, packages_input, 
+        temp_input, date_slaughter, date_production, 
+        vet_name_input, chop_date_input
+    )
+    st.success("✅ 包含蓝色印章的 PDF 渲染成功！")
     st.download_button(
-        label="⬇️ 下载完整证书",
+        label="⬇️ 下载完整证书 (Download)",
         data=pdf_file,
         file_name=f"Certificate_{cert_num_input}.pdf",
         mime="application/pdf"
