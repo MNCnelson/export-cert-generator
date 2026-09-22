@@ -6,21 +6,50 @@ import io
 import os
 
 def draw_blue_chop(c, x, y, vet_name, chop_date):
-    """Highly accurate blue stamp generator matching official references."""
+    """Highly accurate blue stamp with realistic Bezier curve signatures."""
     c.saveState()
     c.translate(x, y)
     
-    # Set color to Official Ink Blue
-    c.setStrokeColorRGB(0.16, 0.26, 0.53)
-    c.setFillColorRGB(0.16, 0.26, 0.53)
+    # Official Ink Blue[cite: 22]
+    c.setStrokeColorRGB(0.12, 0.28, 0.60)
+    c.setFillColorRGB(0.12, 0.28, 0.60)
     
-    # 1. Custom rendering based on which doctor is selected
-    if "Mahmoud" in vet_name:
-        c.rotate(3) # Slight tilt
+    if "Amal" in vet_name:
+        # Dr Amal BELACEL Styling[cite: 22]
+        c.rotate(1) 
         c.setLineWidth(1)
-        c.rect(0, 0, 78*mm, 40*mm) # Box size
+        c.rect(0, 0, 78*mm, 42*mm) 
         
-        # Fonts matching Mahmoud's stamp
+        c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(39*mm, 34*mm, vet_name)
+        c.setFont("Helvetica-Oblique", 14)
+        c.drawCentredString(39*mm, 27*mm, "Vétérinaire Officiel")
+        c.setFont("Helvetica-Bold", 14)
+        c.drawCentredString(39*mm, 14*mm, chop_date)
+        
+        # REALISTIC CURSIVE SIGNATURE using Bezier Curves[cite: 22]
+        c.setLineWidth(0.8)
+        p = c.beginPath()
+        p.moveTo(10*mm, 15*mm) # Start mid-left
+        # Loop down to bottom
+        p.curveTo(15*mm, 15*mm, 22*mm, -5*mm, 26*mm, -10*mm)
+        # Shoot up to first tall loop (crossing Amal)
+        p.curveTo(28*mm, -25*mm, 24*mm, 40*mm, 30*mm, 40*mm)
+        # Come down and loop
+        p.curveTo(36*mm, 40*mm, 34*mm, -15*mm, 40*mm, -15*mm)
+        # Shoot up to second loop (crossing BELACEL)
+        p.curveTo(46*mm, -15*mm, 42*mm, 30*mm, 45*mm, 30*mm)
+        # Come down, loop, and tail off to the right
+        p.curveTo(48*mm, 30*mm, 52*mm, -15*mm, 58*mm, -10*mm)
+        p.curveTo(65*mm, -5*mm, 70*mm, 10*mm, 75*mm, 15*mm)
+        c.drawPath(p, stroke=1, fill=0)
+
+    else:
+        # Dr Mahmoud BENHARRATS Styling[cite: 21]
+        c.rotate(3) 
+        c.setLineWidth(1)
+        c.rect(0, 0, 78*mm, 40*mm)
+        
         c.setFont("Helvetica-Bold", 15)
         c.drawCentredString(39*mm, 32*mm, vet_name)
         c.setFont("Helvetica-Oblique", 13)
@@ -28,42 +57,28 @@ def draw_blue_chop(c, x, y, vet_name, chop_date):
         c.setFont("Helvetica-Bold", 14)
         c.drawCentredString(39*mm, 15*mm, chop_date)
         
-        # Signature lines (Mahmoud style)
+        # Straight line signature[cite: 21]
         c.setLineWidth(0.7)
         c.line(-5*mm, 2*mm, 85*mm, 26*mm)
         c.line(-5*mm, 0*mm, 85*mm, 23*mm)
-        
-    else:
-        # Dr Djamal OULDAROUS styling
-        c.rotate(6) # More dramatic tilt
-        c.setLineWidth(1.2)
-        c.rect(0, 0, 80*mm, 42*mm)
-        
-        # Fonts matching Djamal's stamp (Serif)
-        c.setFont("Times-Bold", 17)
-        c.drawCentredString(40*mm, 33*mm, vet_name)
-        c.setFont("Times-Italic", 15)
-        c.drawCentredString(40*mm, 26*mm, "Vétérinaire Officiel")
-        c.setFont("Helvetica", 14)
-        c.drawCentredString(40*mm, 14*mm, chop_date)
-        
-        # Signature lines (Djamal style)
-        c.setLineWidth(0.8)
-        c.line(-2*mm, 10*mm, 82*mm, 28*mm)
-        c.line(-2*mm, 7*mm, 82*mm, 25*mm)
 
-    # 2. Draw the Round Seal (Same for both, positioned at bottom right)
-    seal_x, seal_y = 62*mm, 12*mm
+    # DETAILED ROUND SEAL[cite: 22]
+    seal_x, seal_y = 65*mm, 10*mm
     c.setLineWidth(1)
-    c.circle(seal_x, seal_y, 9.5*mm) # Outer ring
+    c.circle(seal_x, seal_y, 11*mm) # Outer ring
     c.setLineWidth(0.5)
-    c.circle(seal_x, seal_y, 8.5*mm) # Inner ring
+    c.circle(seal_x, seal_y, 10.2*mm) # Inner ring
     
-    # Text inside the seal
+    # Text stacked inside the seal[cite: 22]
     c.setFont("Helvetica-Bold", 4.5)
-    c.drawCentredString(seal_x, seal_y + 3*mm, "REPUBLIQUE FRANCAISE")
-    c.drawCentredString(seal_x, seal_y - 0.5*mm, "SERVICES VETERINAIRES")
-    c.drawCentredString(seal_x, seal_y - 4*mm, "VAL-DE-MARNE")
+    c.drawCentredString(seal_x, seal_y + 5.5*mm, "REPUBLIQUE FRANCAISE")
+    c.drawCentredString(seal_x, seal_y + 2*mm, "SERVICES")
+    c.drawCentredString(seal_x, seal_y - 1*mm, "VETERINAIRES")
+    c.drawCentredString(seal_x, seal_y - 4*mm, "DU")
+    c.drawCentredString(seal_x, seal_y - 7*mm, "VAL-DE-MARNE")
+    
+    c.setFont("Helvetica-Bold", 3.5)
+    c.drawCentredString(seal_x, seal_y - 9.2*mm, "MINISTERE DE L'AGRICULTURE")
     
     c.restoreState()
 
@@ -189,7 +204,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
     
-    # Stamp on Page 1 (Centered over destination section)
+    # Stamp on Page 1
     draw_blue_chop(c, x=115*mm, y=55*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -262,7 +277,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     text_y -= 5
     c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
 
-    # Stamp on Page 2 (Bottom right, over signature area)
+    # Stamp on Page 2
     draw_blue_chop(c, x=115*mm, y=35*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -296,10 +311,9 @@ with st.form("cert_form"):
     st.subheader("兽医盖章信息 / Veterinarian Stamp")
     col3, col4 = st.columns(2)
     with col3:
-        # User selects the Vet; the app adjusts the stamp style automatically
-        vet_name_input = st.selectbox("官方兽医 (Official Veterinarian)", ["Dr Mahmoud BENHARRATS", "Dr Djamal OULDAROUS"])
+        # Added Dr Amal BELACEL to trigger the realistic signature
+        vet_name_input = st.selectbox("官方兽医 (Official Veterinarian)", ["Dr Amal BELACEL", "Dr Mahmoud BENHARRATS", "Dr Djamal OULDAROUS"])
     with col4:
-        # Date is fully customizable
         chop_date_input = st.text_input("盖章日期 (Chop Date)", value="17 SEP. 2026")
         
     submitted = st.form_submit_button("生成带盖章 PDF (Generate PDF)")
@@ -310,7 +324,7 @@ if submitted:
         temp_input, date_slaughter, date_production, 
         vet_name_input, chop_date_input
     )
-    st.success("✅ 包含高精度动态印章的 PDF 渲染成功！")
+    st.success("✅ 包含高精度真实签名的 PDF 渲染成功！")
     st.download_button(
         label="⬇️ 下载完整证书 (Download)",
         data=pdf_file,
