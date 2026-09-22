@@ -6,56 +6,63 @@ import io
 import os
 
 def draw_official_stamp(c, x, y, vet_name, chop_date):
-    """Draws a high-precision, 1:1 vector reproduction of the official French veterinarian stamp."""
+    """繪製 1:1 高精度向量官方印章（含豐富簽名線條與精確圓印排版）"""
     c.saveState()
     c.translate(x, y)
     
-    # Official Stamp Blue Color
-    c.setStrokeColorRGB(0.12, 0.28, 0.60)
-    c.setFillColorRGB(0.12, 0.28, 0.60)
+    # 官方印章深藍色
+    c.setStrokeColorRGB(0.10, 0.25, 0.55)
+    c.setFillColorRGB(0.10, 0.25, 0.55)
     
-    # Rotation angle matching official stamp
+    # 印章整體傾斜角度
     c.rotate(6.0)
 
-    # 1. Main Stamp Outer Box
+    # 1. 矩形外框
     c.setLineWidth(1.2)
     c.rect(0, 0, 76*mm, 44*mm)
 
-    # 2. Doctor Name & Title
+    # 2. 獸醫姓名與頭銜
     c.setFont("Times-Bold", 16)
     c.drawCentredString(38*mm, 35*mm, vet_name)
     
     c.setFont("Times-Italic", 13)
     c.drawCentredString(38*mm, 28*mm, "Vétérinaire Officiel")
 
-    # 3. Dynamic Date Overlay
+    # 3. 動態日期
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(35*mm, 15*mm, chop_date)
 
-    # 4. Circular Official Seal (Bottom Right Corner)
-    seal_x, seal_y = 61*mm, 12*mm
+    # 4. 右下角雙圈官方圓印
+    seal_x, seal_y = 62*mm, 11*mm
     c.setLineWidth(1)
-    c.circle(seal_x, seal_y, 10.5*mm)   # Outer Ring
+    c.circle(seal_x, seal_y, 10.8*mm)   # 外圈
     c.setLineWidth(0.5)
-    c.circle(seal_x, seal_y, 9.7*mm)    # Inner Ring
+    c.circle(seal_x, seal_y, 10.0*mm)   # 內圈
 
-    # Text inside Circular Seal
-    c.setFont("Helvetica-Bold", 4.2)
-    c.drawCentredString(seal_x, seal_y + 5.5*mm, "REPUBLIQUE FRANCAISE")
-    c.drawCentredString(seal_x, seal_y + 2.2*mm, "SERVICES")
-    c.drawCentredString(seal_x, seal_y - 0.8*mm, "VETERINAIRES")
+    # 圓印內部文字 (嚴格按官方比例佈局)
+    c.setFont("Helvetica-Bold", 4.0)
+    c.drawCentredString(seal_x, seal_y + 6.2*mm, "REPUBLIQUE FRANCAISE")
+    c.drawCentredString(seal_x, seal_y + 2.8*mm, "SERVICES")
+    c.drawCentredString(seal_x, seal_y - 0.5*mm, "VETERINAIRES")
     c.drawCentredString(seal_x, seal_y - 3.8*mm, "DU")
     c.drawCentredString(seal_x, seal_y - 6.8*mm, "VAL-DE-MARNE")
-    c.setFont("Helvetica-Bold", 3.2)
+    
+    c.setFont("Helvetica-Bold", 3.0)
     c.drawCentredString(seal_x, seal_y - 9.0*mm, "MINISTERE DE L'AGRICULTURE")
 
-    # 5. Overlapping Handwritten Signature Stroke Lines
-    c.setLineWidth(0.9)
+    # 5. 豐富的手寫連筆簽名線條 (多重自然弧線)
+    c.setLineWidth(0.8)
     p = c.beginPath()
-    p.moveTo(-12*mm, -5*mm)
-    p.curveTo(15*mm, 8*mm, 45*mm, 18*mm, 78*mm, 26*mm)
-    p.moveTo(-10*mm, -10*mm)
-    p.curveTo(18*mm, 4*mm, 48*mm, 15*mm, 76*mm, 23*mm)
+    # 第一條主線
+    p.moveTo(-15*mm, -8*mm)
+    p.curveTo(12*mm, 6*mm, 42*mm, 16*mm, 78*mm, 26*mm)
+    # 第二條平行線（帶手寫起筆鉤）
+    p.moveTo(-12*mm, -13*mm)
+    p.curveTo(15*mm, 2*mm, 45*mm, 13*mm, 76*mm, 23*mm)
+    # 第三條連筆微弧線（增加線條豐富度）
+    p.moveTo(25*mm, 10*mm)
+    p.curveTo(35*mm, 16*mm, 48*mm, 18*mm, 52*mm, 19.5*mm)
+    
     c.drawPath(p, stroke=1, fill=0)
 
     c.restoreState()
@@ -65,12 +72,12 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c = canvas.Canvas(buffer, pagesize=A4)
     
     # ==========================================
-    # PAGE 1: Product Details & Destination
+    # PAGE 1: 貨物標識與目的地
     # ==========================================
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 280*mm, "ORIGINAL")
     c.circle(32*mm, 281*mm, 1.5*mm)         
-    c.circle(32*mm, 281*mm, 0.7*mm, fill=1) # Checked radio button
+    c.circle(32*mm, 281*mm, 0.7*mm, fill=1) 
     
     c.drawString(42*mm, 280*mm, "DUPLICATA")
     c.circle(62*mm, 281*mm, 1.5*mm)         
@@ -79,7 +86,6 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.setFont("Helvetica", 7)
     c.drawString(15*mm, 275*mm, "Nombre total de duplicatas délivrés / Total number of copies issued : 0")
 
-    # Marianne Logo Centering
     if os.path.exists("logo.png"):
         c.drawImage("logo.png", 95*mm, 255*mm, width=20*mm, height=20*mm, preserveAspectRatio=True, mask='auto')
 
@@ -182,7 +188,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
     
-    # Page 1 Official Stamp Overlay (Adjusted x position to align right)
+    # Page 1 蓋章（右移對齊，避開左側文字）
     draw_official_stamp(c, x=128*mm, y=48*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -190,7 +196,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(190*mm, 15*mm, "1/2")
 
     # ==========================================
-    # PAGE 2: Health Certification Clauses
+    # PAGE 2: 衛生認證條款
     # ==========================================
     c.showPage()
     
@@ -255,7 +261,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     text_y -= 5
     c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
 
-    # Page 2 Official Stamp Overlay
+    # Page 2 蓋章
     draw_official_stamp(c, x=120*mm, y=28*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -267,7 +273,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     return buffer
 
 # ==========================
-# Streamlit Web App Interface
+# Streamlit 界面
 # ==========================
 st.set_page_config(page_title="衛生證書生成系統", layout="centered")
 st.title("📄 官方雙頁衛生證書生成器")
@@ -305,7 +311,7 @@ if submitted:
         temp_input, date_slaughter, date_production, 
         vet_name_input, chop_date_input
     )
-    st.success("✅ PDF 渲染成功！印章對齊與動態日期已完美匹配！")
+    st.success("✅ PDF 渲染成功！印章內部文字排版與筆跡線條已微調完善。")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
         data=pdf_file,
