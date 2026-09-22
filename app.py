@@ -6,10 +6,10 @@ import io
 import os
 
 def draw_blue_chop(c, x, y, vet_name, chop_date):
-    """Draws stamp image using Multiply blend mode so white backgrounds don't block underlying text."""
+    """画出倾斜印章，并将日期同步旋转相同角度"""
     c.saveState()
     
-    # Match the stamp image filename to the selected veterinarian
+    # 根据选择的兽医匹配对应的印章图片
     if "Amal" in vet_name:
         stamp_img = "stamp_amal.png"
     elif "Mahmoud" in vet_name:
@@ -18,25 +18,28 @@ def draw_blue_chop(c, x, y, vet_name, chop_date):
         stamp_img = "stamp_djamal.png"
         
     c.translate(x, y)
-    c.rotate(3) # Slight tilt for hand-stamped appearance
+    
+    # 设置倾斜角度（角度越大，倾斜越明显）
+    angle = 8
+    c.rotate(angle)
 
     if os.path.exists(stamp_img):
-        # Multiply blend mode blends white backgrounds transparently into the page
+        # 1. 正片叠底模式（Multiply），使印章白底透明，不遮挡背景文字
         c.setBlendMode("Multiply")
         c.drawImage(stamp_img, 0, 0, width=72*mm, height=42*mm, preserveAspectRatio=True, mask='auto')
         
-        # Reset blend mode to Normal for sharp date text rendering
+        # 2. 在旋转后的坐标系下打印日期，使日期与印章完全平行倾斜
         c.setBlendMode("Normal")
-        c.setFillColorRGB(0.12, 0.28, 0.60) 
+        c.setFillColorRGB(0.12, 0.28, 0.60) # 对应深蓝色
         c.setFont("Helvetica-Bold", 13)
         
-        # Overlay dynamic date onto the stamp's erased date area
-        c.drawCentredString(36*mm, 15*mm, chop_date)
+        # 调整日期印制位置 (36*mm 表示水平居中，14*mm 表示垂直高度)
+        c.drawCentredString(36*mm, 14*mm, chop_date)
     else:
-        # Fallback warning if image file is missing on GitHub
+        # 如果找不到图片文件的红字提示
         c.setFillColorRGB(1, 0, 0)
         c.setFont("Helvetica", 10)
-        c.drawString(0, 20*mm, f"[Please upload {stamp_img} to GitHub]")
+        c.drawString(0, 20*mm, f"[请在 GitHub 上传 {stamp_img}]")
         
     c.restoreState()
 
@@ -45,14 +48,13 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c = canvas.Canvas(buffer, pagesize=A4)
     
     # ==========================================
-    # PAGE 1: Product Identification & Origin
+    # PAGE 1: 货物标识与来源 (Section I, II, III)
     # ==========================================
     
-    # Top Row: Radio circles & Certificate Number
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 280*mm, "ORIGINAL")
     c.circle(32*mm, 281*mm, 1.5*mm)         
-    c.circle(32*mm, 281*mm, 0.7*mm, fill=1) # Filled circle for ORIGINAL
+    c.circle(32*mm, 281*mm, 0.7*mm, fill=1) 
     
     c.drawString(42*mm, 280*mm, "DUPLICATA")
     c.circle(62*mm, 281*mm, 1.5*mm)         
@@ -61,7 +63,6 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.setFont("Helvetica", 7)
     c.drawString(15*mm, 275*mm, "Nombre total de duplicatas délivrés / Total number of copies issued : 0")
 
-    # Centered Marianne Logo
     if os.path.exists("logo.png"):
         c.drawImage("logo.png", 95*mm, 255*mm, width=20*mm, height=20*mm, preserveAspectRatio=True, mask='auto')
 
@@ -79,7 +80,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawCentredString(105*mm, 225*mm, "CERTIFICATE FOR EXPORTATION OF GAME BIRDS,")
     c.drawCentredString(105*mm, 220*mm, "AND THEIR PRODUCTS FROM FRANCE TO HONG KONG")
 
-    # Section I
+    # [Section I]
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 210*mm, "I. Identification des viandes et produits à base de viande / Identification of games birds and their products:")
     
@@ -120,7 +121,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.line(160*mm, 170*mm, 195*mm, 170*mm)
     c.drawString(162*mm, 171*mm, date_production)
 
-    # Section II
+    # [Section II]
     c.setDash()
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 155*mm, "II. Provenance des viandes et produits à base de viande / Origin of meat and meat products:")
@@ -132,7 +133,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 124*mm, "Ateliers de transformation / Processing plants (adresses, départements et n° d'agrément / addresses, departments and approval numbers):")
     c.drawString(20*mm, 120*mm, "Voir annexe / See appendix")
 
-    # Section III
+    # [Section III]
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 110*mm, "III. Destination des viandes et produits à base de viande / Destination of meat and meat products:")
     c.setFont("Helvetica", 9)
@@ -164,7 +165,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
     
-    # Stamp placement for Page 1 (Positioned right to avoid covering 'HONG KONG' text)
+    # 盖印章 (第1页)
     draw_blue_chop(c, x=122*mm, y=52*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -172,7 +173,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(190*mm, 15*mm, "1/2")
 
     # ==========================================
-    # PAGE 2: Health Certification Clauses
+    # PAGE 2: 卫生认证条款 
     # ==========================================
     c.showPage()
     
@@ -237,7 +238,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     text_y -= 5
     c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
 
-    # Stamp placement for Page 2 (Positioned over signature area)
+    # 盖印章 (第2页)
     draw_blue_chop(c, x=118*mm, y=28*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -249,11 +250,10 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     return buffer
 
 # ==========================
-# Streamlit Web App Interface
+# Streamlit 界面
 # ==========================
 st.set_page_config(page_title="卫生证书生成系统", layout="centered")
-st.title("📄 官方双页卫生证书生成器 (透明印章版)")
-st.markdown("⚠️ **提示: 请确保 GitHub 上已上传擦除日期的印章底图 (`stamp_amal.png`, `stamp_mahmoud.png`, `stamp_djamal.png`)**")
+st.title("📄 官方双页卫生证书生成器 (倾斜印章版)")
 
 with st.form("cert_form"):
     st.subheader("基础信息 / Basic Information")
@@ -284,7 +284,7 @@ if submitted:
         temp_input, date_slaughter, date_production, 
         vet_name_input, chop_date_input
     )
-    st.success("✅ 渲染成功！底层文字已可清晰显示。")
+    st.success("✅ 渲染成功！印章与日期已完全同步倾斜。")
     st.download_button(
         label="⬇️ 下载完整证书 (Download)",
         data=pdf_file,
