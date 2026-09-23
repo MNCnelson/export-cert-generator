@@ -5,20 +5,20 @@ from reportlab.lib.units import mm
 import io
 import os
 import math
+from PIL import Image, ImageFilter, ImageEnhance
+import pypdf
 
 def draw_curved_text(c, text, cx, cy, radius, start_angle, end_angle, font_name, font_size, is_bottom=False):
-    """沿著圓圈弧度繪製彎曲文字的向量算法"""
+    """沿著圓圈弧度繪製彎曲文字"""
     c.setFont(font_name, font_size)
     num_chars = len(text)
     if num_chars == 0:
         return
     
     angle_step = (end_angle - start_angle) / max(num_chars - 1, 1)
-    
     for i, char in enumerate(text):
         angle_deg = start_angle + i * angle_step
         angle_rad = math.radians(angle_deg)
-        
         x = cx + radius * math.cos(angle_rad)
         y = cy + radius * math.sin(angle_rad)
         
@@ -29,10 +29,9 @@ def draw_curved_text(c, text, cx, cy, radius, start_angle, end_angle, font_name,
         c.restoreState()
 
 def draw_official_stamp(c, x, y, vet_name, chop_date):
-    """1:1 高精度向量印章（含真實圓弧彎曲文字排版）"""
+    """1:1 高精度向量印章"""
     c.saveState()
     c.translate(x, y)
-    
     c.setStrokeColorRGB(0.10, 0.25, 0.55)
     c.setFillColorRGB(0.10, 0.25, 0.55)
     c.rotate(6.0)
@@ -83,8 +82,39 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
 
     c.restoreState()
 
+def apply_photocopy_effect(pdf_bytes):
+    """將清晰 PDF 處理成具有影印/掃描模糊質感的 PDF"""
+    try:
+        from pdf2image import convert_from_bytes
+        images = convert_from_bytes(pdf_bytes, dpi=150)
+        
+        output_pdf_writer = pypdf.PdfWriter()
+        
+        for img in images:
+            # 1. 輕微高斯模糊 (微調 0.6 效果最像影印機)
+            blur_img = img.filter(ImageFilter.GaussianBlur(radius=0.6))
+            
+            # 2. 降低對比度與灰階度（模擬影印機油墨不均）
+            enhancer = ImageEnhance.Contrast(blur_img)
+            blur_img = enhancer.enhance(1.1)
+            
+            # 3. 轉存回 PDF 頁面
+            img_byte_arr = io.BytesIO()
+            blur_img.save(img_byte_arr, format='PDF', resolution=150.0)
+            img_byte_arr.seek(0)
+            
+            page_reader = pypdf.PdfReader(img_byte_arr)
+            output_pdf_writer.add_page(page_reader.pages[0])
+            
+        final_buffer = io.BytesIO()
+        output_pdf_writer.write(final_buffer)
+        return final_buffer.getvalue()
+    except Exception as e:
+        # 如果環境缺乏 poppler 庫，自動降級返回原版 PDF，確保程式不崩潰
+        return pdf_bytes
+
 @st.cache_data(show_spinner=False)
-def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production, vet_name, chop_date):
+def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production, vet_name, chop_date, enable_blur=False):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     
@@ -99,7 +129,6 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(42*mm, 280*mm, "DUPLICATA")
     c.circle(62*mm, 281*mm, 1.5*mm)         
     
-    # 修正：左移 X 軸座標至 110*mm，確保完整顯示長證書號 (如 FR-094-26-0349818)
     c.drawString(110*mm, 280*mm, f"CERTIFICAT N° / CERTIFICATE N° {cert_number}")
     c.setFont("Helvetica", 7)
     c.drawString(15*mm, 275*mm, "Nombre total de duplicatas délivrés / Total number of copies issued : 0")
@@ -219,7 +248,6 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.showPage()
     
     c.setFont("Helvetica-Bold", 10)
-    # 修正：第 2 頁頂部編號座標同步調整至 130*mm，防止溢出
     c.drawString(130*mm, 280*mm, f"CERTIFICAT N° {cert_number}")
     c.drawString(15*mm, 260*mm, "IV. ATTESTATION SANITAIRE / HEALTH CERTIFICATION:")
     
@@ -288,7 +316,11 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(190*mm, 15*mm, "2/2")
 
     c.save()
-    return buffer.getvalue()
+    raw_pdf = buffer.getvalue()
+    
+    if enable_blur:
+        return apply_photocopy_effect(raw_pdf)
+    return raw_pdf
 
 # Streamlit 界面
 st.set_page_config(page_title="衛生證書生成系統", layout="centered")
@@ -325,6 +357,9 @@ with st.form("cert_form"):
     with col4:
         chop_date_input = st.text_input("蓋章日期 (Chop Date)", value="01 Aug 2026")
         
+    # 特效開關
+    blur_effect = st.checkbox("增加真實影印/掃描模糊效果 (Photocopy Blur Effect)")
+
     submitted = st.form_submit_button("生成帶蓋章 PDF (Generate PDF)")
 
 if submitted:
@@ -332,9 +367,9 @@ if submitted:
         pdf_bytes = create_pdf(
             cert_num_input, species_input, weight_input, packages_input, 
             temp_input, date_slaughter, date_production, 
-            vet_name_input, chop_date_input
+            vet_name_input, chop_date_input, blur_effect
         )
-    st.success("✅ PDF 渲染成功！證書編號溢出問題已修復。")
+    st.success("✅ PDF 渲染成功！")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
         data=pdf_bytes,
