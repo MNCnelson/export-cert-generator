@@ -326,7 +326,14 @@ with st.form("cert_form"):
     
     col1, col2 = st.columns(2)
     with col1:
-        species_input = st.selectbox("物種 (Species)", ["CAILLE", "PIGEONNEAU / PIGEON", "LAMB RACK"])
+        # 新增選單項目：Sweetbread, Lamb Rack, Pork
+        species_input = st.selectbox("物種 (Species)", [
+            "CAILLE", 
+            "PIGEONNEAU / PIGEON", 
+            "SWEETBREAD", 
+            "LAMB RACK", 
+            "PORK"
+        ])
         packages_input = st.text_input("包裝數量 (Packages)", value="10 box")
         date_slaughter = st.text_input("屠宰日期 (Date of slaughter)", value="SEE ANNEXE")
     with col2:
@@ -353,7 +360,7 @@ if submitted:
         temp_input, date_slaughter, date_production, 
         vet_name_input, chop_date_input
     )
-    st.success("✅ PDF 渲染成功！圓圈文字現已成功實現弧形曲面彎曲對齊！")
+    st.success("✅ PDF 渲染成功！已新增 Sweetbread, Lamb Rack, Pork 選項。")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
         data=pdf_file,
