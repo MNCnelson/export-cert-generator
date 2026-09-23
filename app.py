@@ -7,7 +7,7 @@ import os
 import math
 
 def draw_curved_text(c, text, cx, cy, radius, start_angle, end_angle, font_name, font_size, is_bottom=False):
-    """沿著圓圈弧度繪製彎曲文字的向量算法"""
+    """Optimized curved text renderer for circular seals."""
     c.setFont(font_name, font_size)
     num_chars = len(text)
     if num_chars == 0:
@@ -19,67 +19,48 @@ def draw_curved_text(c, text, cx, cy, radius, start_angle, end_angle, font_name,
         angle_deg = start_angle + i * angle_step
         angle_rad = math.radians(angle_deg)
         
-        # 計算字母在圓弧上的 X, Y 座標
         x = cx + radius * math.cos(angle_rad)
         y = cy + radius * math.sin(angle_rad)
         
         c.saveState()
         c.translate(x, y)
-        
-        # 旋轉每個字母使其切合弧線
-        if is_bottom:
-            c.rotate(angle_deg + 90)
-        else:
-            c.rotate(angle_deg - 90)
-            
+        c.rotate(angle_deg + 90 if is_bottom else angle_deg - 90)
         c.drawCentredString(0, 0, char)
         c.restoreState()
 
 def draw_official_stamp(c, x, y, vet_name, chop_date):
-    """1:1 高精度向量印章（含真實圓弧彎曲文字排版）"""
+    """1:1 Vector Official Stamp Renderer."""
     c.saveState()
     c.translate(x, y)
     
-    # 印章深藍色
     c.setStrokeColorRGB(0.10, 0.25, 0.55)
     c.setFillColorRGB(0.10, 0.25, 0.55)
-    
-    # 印章整體傾斜角度
     c.rotate(6.0)
 
-    # 1. 矩形外框
+    # Outer Box
     c.setLineWidth(1.2)
     c.rect(0, 0, 76*mm, 44*mm)
 
-    # 2. 獸醫姓名與頭銜
+    # Doctor Credentials
     c.setFont("Times-Bold", 16)
     c.drawCentredString(38*mm, 35*mm, vet_name)
-    
     c.setFont("Times-Italic", 13)
     c.drawCentredString(38*mm, 28*mm, "Vétérinaire Officiel")
 
-    # 3. 動態日期
+    # Date
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(35*mm, 15*mm, chop_date)
 
-    # 4. 右下角雙圈官方圓印
+    # Circular Seal
     seal_x, seal_y = 62*mm, 11*mm
     c.setLineWidth(1)
-    c.circle(seal_x, seal_y, 10.8*mm)   # 外圈
+    c.circle(seal_x, seal_y, 10.8*mm)
     c.setLineWidth(0.5)
-    c.circle(seal_x, seal_y, 10.0*mm)   # 內圈
+    c.circle(seal_x, seal_y, 10.0*mm)
 
-    # --- 圓圈內部精準文字排版 ---
+    # Curved Text Elements
+    draw_curved_text(c, "REPUBLIQUE FRANCAISE", seal_x, seal_y, 8.2*mm, 140, 40, "Helvetica-Bold", 3.8)
     
-    # A. 頂部弧形文字: REPUBLIQUE FRANCAISE (沿內圈上方弧度彎曲)
-    draw_curved_text(
-        c, text="REPUBLIQUE FRANCAISE", 
-        cx=seal_x, cy=seal_y, radius=8.2*mm, 
-        start_angle=140, end_angle=40, 
-        font_name="Helvetica-Bold", font_size=3.8, is_bottom=False
-    )
-    
-    # B. 中間多行平鋪文字 (間距嚴格對齊原圖)
     c.setFont("Helvetica-Bold", 4.2)
     c.drawCentredString(seal_x, seal_y + 2.5*mm, "SERVICES")
     c.drawCentredString(seal_x, seal_y - 1.2*mm, "VETERINAIRES")
@@ -88,15 +69,9 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
     c.drawCentredString(seal_x, seal_y - 4.5*mm, "DU")
     c.drawCentredString(seal_x, seal_y - 7.2*mm, "VAL-DE-MARNE")
     
-    # C. 底部弧形文字: MINISTERE DE L'AGRICULTURE (沿內圈下方弧度彎曲)
-    draw_curved_text(
-        c, text="MINISTERE DE L'AGRICULTURE", 
-        cx=seal_x, cy=seal_y, radius=8.5*mm, 
-        start_angle=220, end_angle=320, 
-        font_name="Helvetica-Bold", font_size=2.8, is_bottom=True
-    )
+    draw_curved_text(c, "MINISTERE DE L'AGRICULTURE", seal_x, seal_y, 8.5*mm, 220, 320, "Helvetica-Bold", 2.8, True)
 
-    # 5. 豐富的手寫連筆簽名線條
+    # Signature Strokes
     c.setLineWidth(0.8)
     p = c.beginPath()
     p.moveTo(-15*mm, -8*mm)
@@ -109,13 +84,13 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
 
     c.restoreState()
 
+# STREAMLIT CACHING DECORATOR FOR FAST GENERATION
+@st.cache_data(show_spinner=False)
 def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production, vet_name, chop_date):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     
-    # ==========================================
-    # PAGE 1: 貨物標識與目的地
-    # ==========================================
+    # Page 1
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 280*mm, "ORIGINAL")
     c.circle(32*mm, 281*mm, 1.5*mm)         
@@ -148,7 +123,6 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     # Section I
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 210*mm, "I. Identification des viandes et produits à base de viande / Identification of games birds and their products:")
-    
     c.setFont("Helvetica", 9)
     c.drawString(20*mm, 202*mm, "a) Espèce animale / Species:")
     c.setDash(1, 2)
@@ -160,7 +134,6 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 194*mm, "b) Nature des pièces / Nature of joints:")
     c.line(75*mm, 194*mm, 195*mm, 194*mm)
     c.drawString(80*mm, 195*mm, "SEE ANNEXE")
-    
     c.drawString(20*mm, 186*mm, "c) Nombre de pièces ou d'unités d'emballage / Number of joints or packages:")
     c.line(135*mm, 186*mm, 195*mm, 186*mm)
     c.setFont("Helvetica-Bold", 10)
@@ -230,22 +203,19 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
     
-    # Page 1 蓋章
+    # Stamp 1
     draw_official_stamp(c, x=128*mm, y=48*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
     c.drawString(15*mm, 15*mm, "HK VPG AVR 14.doc")
     c.drawString(190*mm, 15*mm, "1/2")
 
-    # ==========================================
-    # PAGE 2: 衛生認證條款
-    # ==========================================
+    # Page 2
     c.showPage()
     
     c.setFont("Helvetica-Bold", 10)
     c.drawString(160*mm, 280*mm, f"CERTIFICAT N° {cert_number}")
     c.drawString(15*mm, 260*mm, "IV. ATTESTATION SANITAIRE / HEALTH CERTIFICATION:")
-    
     c.setFont("Helvetica", 9)
     c.drawString(15*mm, 250*mm, "Je soussigné, vétérinaire officiel, certifie que / I, official veterinarian, hereby certify that:")
     
@@ -303,7 +273,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     text_y -= 5
     c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
 
-    # Page 2 蓋章
+    # Stamp 2
     draw_official_stamp(c, x=120*mm, y=28*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -311,12 +281,10 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(190*mm, 15*mm, "2/2")
 
     c.save()
-    buffer.seek(0)
-    return buffer
+    buffer.getvalue()
+    return buffer.getvalue()
 
-# ==========================
-# Streamlit 界面
-# ==========================
+# Streamlit Interface
 st.set_page_config(page_title="衛生證書生成系統", layout="centered")
 st.title("📄 官方雙頁衛生證書生成器")
 
@@ -326,7 +294,6 @@ with st.form("cert_form"):
     
     col1, col2 = st.columns(2)
     with col1:
-        # 新增選單項目：Sweetbread, Lamb Rack, Pork
         species_input = st.selectbox("物種 (Species)", [
             "CAILLE", 
             "PIGEONNEAU / PIGEON", 
@@ -355,15 +322,16 @@ with st.form("cert_form"):
     submitted = st.form_submit_button("生成帶蓋章 PDF (Generate PDF)")
 
 if submitted:
-    pdf_file = create_pdf(
-        cert_num_input, species_input, weight_input, packages_input, 
-        temp_input, date_slaughter, date_production, 
-        vet_name_input, chop_date_input
-    )
-    st.success("✅ PDF 渲染成功！已新增 Sweetbread, Lamb Rack, Pork 選項。")
+    with st.spinner("🚀 正在快速生成 PDF..."):
+        pdf_bytes = create_pdf(
+            cert_num_input, species_input, weight_input, packages_input, 
+            temp_input, date_slaughter, date_production, 
+            vet_name_input, chop_date_input
+        )
+    st.success("✅ PDF 渲染成功！")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
-        data=pdf_file,
+        data=pdf_bytes,
         file_name=f"Certificate_{cert_num_input}.pdf",
         mime="application/pdf"
     )
