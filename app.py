@@ -5,7 +5,7 @@ from reportlab.lib.units import mm
 import io
 import os
 import math
-import random
+import pypdfium2 as pdfium
 from PIL import Image, ImageFilter, ImageEnhance
 import pypdf
 
@@ -84,40 +84,39 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
     c.restoreState()
 
 def apply_photocopy_effect(pdf_bytes):
-    """強效影印機/掃描件質感處理引擎"""
-    try:
-        from pdf2image import convert_from_bytes
-        images = convert_from_bytes(pdf_bytes, dpi=150)
-        output_pdf_writer = pypdf.PdfWriter()
+    """基於 pypdfium2 的免外部依賴影印機質感處理引擎"""
+    pdf = pdfium.PdfDocument(pdf_bytes)
+    output_pdf_writer = pypdf.PdfWriter()
+    
+    for i in range(len(pdf)):
+        # 1. 渲染 PDF 頁面為 PIL 圖片 (150 DPI)
+        page = pdf[i]
+        image = page.render(scale=150/72).to_pil()
         
-        for img in images:
-            # 1. 轉為灰階模擬單色影印
-            img = img.convert('L')
-            
-            # 2. 施加明顯的高斯模糊 (Blur)
-            img = img.filter(ImageFilter.GaussianBlur(radius=1.2))
-            
-            # 3. 調整對比度與亮度（模擬影印機碳粉不均與底紙灰度）
-            img = ImageEnhance.Contrast(img).enhance(1.4)
-            img = ImageEnhance.Brightness(img).enhance(0.95)
-            
-            # 4. 微小旋轉 (0.5度)，模擬影印放置時的自然微歪
-            img = img.rotate(0.5, expand=False, fillcolor=255)
-            
-            # 轉存回 PDF
-            img_byte_arr = io.BytesIO()
-            img.convert('RGB').save(img_byte_arr, format='PDF', resolution=150.0)
-            img_byte_arr.seek(0)
-            
-            page_reader = pypdf.PdfReader(img_byte_arr)
-            output_pdf_writer.add_page(page_reader.pages[0])
-            
-        final_buffer = io.BytesIO()
-        output_pdf_writer.write(final_buffer)
-        return final_buffer.getvalue()
-    except Exception as e:
-        st.warning(f"特效模組提示: {e}，返回原版 PDF。")
-        return pdf_bytes
+        # 2. 轉灰階，模擬單色影印
+        gray_img = image.convert('L')
+        
+        # 3. 高斯模糊 (1.0 像素)，模擬影印機光學鏡頭失焦
+        blurred_img = gray_img.filter(ImageFilter.GaussianBlur(radius=1.0))
+        
+        # 4. 增加對比度與調整亮度，模擬碳粉與黑白度不均
+        enhanced_img = ImageEnhance.Contrast(blurred_img).enhance(1.3)
+        enhanced_img = ImageEnhance.Brightness(enhanced_img).enhance(0.96)
+        
+        # 5. 輕微歪斜 0.4 度，模擬放紙不平
+        rotated_img = enhanced_img.rotate(0.4, expand=False, fillcolor=255)
+        
+        # 轉存回 PDF
+        img_byte_arr = io.BytesIO()
+        rotated_img.convert('RGB').save(img_byte_arr, format='PDF', resolution=150.0)
+        img_byte_arr.seek(0)
+        
+        page_reader = pypdf.PdfReader(img_byte_arr)
+        output_pdf_writer.add_page(page_reader.pages[0])
+        
+    final_buffer = io.BytesIO()
+    output_pdf_writer.write(final_buffer)
+    return final_buffer.getvalue()
 
 @st.cache_data(show_spinner=False)
 def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production, vet_name, chop_date, enable_blur=False):
@@ -363,7 +362,7 @@ with st.form("cert_form"):
     with col4:
         chop_date_input = st.text_input("蓋章日期 (Chop Date)", value="01 Aug 2026")
         
-    # 預設直接勾選真實影印效果
+    # 預設勾選影印模糊效果
     blur_effect = st.checkbox("增加真實影印/掃描模糊效果 (Photocopy Blur Effect)", value=True)
 
     submitted = st.form_submit_button("生成帶蓋章 PDF (Generate PDF)")
