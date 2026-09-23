@@ -7,7 +7,7 @@ import os
 import math
 
 def draw_curved_text(c, text, cx, cy, radius, start_angle, end_angle, font_name, font_size, is_bottom=False):
-    """Optimized curved text renderer for circular seals."""
+    """沿著圓圈弧度繪製彎曲文字的向量算法"""
     c.setFont(font_name, font_size)
     num_chars = len(text)
     if num_chars == 0:
@@ -29,7 +29,7 @@ def draw_curved_text(c, text, cx, cy, radius, start_angle, end_angle, font_name,
         c.restoreState()
 
 def draw_official_stamp(c, x, y, vet_name, chop_date):
-    """1:1 Vector Official Stamp Renderer."""
+    """1:1 高精度向量印章（含真實圓弧彎曲文字排版）"""
     c.saveState()
     c.translate(x, y)
     
@@ -37,28 +37,27 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
     c.setFillColorRGB(0.10, 0.25, 0.55)
     c.rotate(6.0)
 
-    # Outer Box
+    # 1. 矩形外框
     c.setLineWidth(1.2)
     c.rect(0, 0, 76*mm, 44*mm)
 
-    # Doctor Credentials
+    # 2. 獸醫姓名與頭銜
     c.setFont("Times-Bold", 16)
     c.drawCentredString(38*mm, 35*mm, vet_name)
     c.setFont("Times-Italic", 13)
     c.drawCentredString(38*mm, 28*mm, "Vétérinaire Officiel")
 
-    # Date
+    # 3. 動態日期
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(35*mm, 15*mm, chop_date)
 
-    # Circular Seal
+    # 4. 右下角雙圈官方圓印
     seal_x, seal_y = 62*mm, 11*mm
     c.setLineWidth(1)
     c.circle(seal_x, seal_y, 10.8*mm)
     c.setLineWidth(0.5)
     c.circle(seal_x, seal_y, 10.0*mm)
 
-    # Curved Text Elements
     draw_curved_text(c, "REPUBLIQUE FRANCAISE", seal_x, seal_y, 8.2*mm, 140, 40, "Helvetica-Bold", 3.8)
     
     c.setFont("Helvetica-Bold", 4.2)
@@ -71,7 +70,7 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
     
     draw_curved_text(c, "MINISTERE DE L'AGRICULTURE", seal_x, seal_y, 8.5*mm, 220, 320, "Helvetica-Bold", 2.8, True)
 
-    # Signature Strokes
+    # 5. 簽名筆跡
     c.setLineWidth(0.8)
     p = c.beginPath()
     p.moveTo(-15*mm, -8*mm)
@@ -84,13 +83,14 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
 
     c.restoreState()
 
-# STREAMLIT CACHING DECORATOR FOR FAST GENERATION
 @st.cache_data(show_spinner=False)
 def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production, vet_name, chop_date):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     
-    # Page 1
+    # ==========================================
+    # PAGE 1: 貨物標識與目的地
+    # ==========================================
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 280*mm, "ORIGINAL")
     c.circle(32*mm, 281*mm, 1.5*mm)         
@@ -99,7 +99,8 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(42*mm, 280*mm, "DUPLICATA")
     c.circle(62*mm, 281*mm, 1.5*mm)         
     
-    c.drawString(135*mm, 280*mm, f"CERTIFICAT N° / CERTIFICATE N° {cert_number}")
+    # 修正：左移 X 軸座標至 110*mm，確保完整顯示長證書號 (如 FR-094-26-0349818)
+    c.drawString(110*mm, 280*mm, f"CERTIFICAT N° / CERTIFICATE N° {cert_number}")
     c.setFont("Helvetica", 7)
     c.drawString(15*mm, 275*mm, "Nombre total de duplicatas délivrés / Total number of copies issued : 0")
 
@@ -123,6 +124,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     # Section I
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 210*mm, "I. Identification des viandes et produits à base de viande / Identification of games birds and their products:")
+    
     c.setFont("Helvetica", 9)
     c.drawString(20*mm, 202*mm, "a) Espèce animale / Species:")
     c.setDash(1, 2)
@@ -134,6 +136,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 194*mm, "b) Nature des pièces / Nature of joints:")
     c.line(75*mm, 194*mm, 195*mm, 194*mm)
     c.drawString(80*mm, 195*mm, "SEE ANNEXE")
+    
     c.drawString(20*mm, 186*mm, "c) Nombre de pièces ou d'unités d'emballage / Number of joints or packages:")
     c.line(135*mm, 186*mm, 195*mm, 186*mm)
     c.setFont("Helvetica-Bold", 10)
@@ -203,19 +206,23 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
     
-    # Stamp 1
+    # Page 1 蓋章
     draw_official_stamp(c, x=128*mm, y=48*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
     c.drawString(15*mm, 15*mm, "HK VPG AVR 14.doc")
     c.drawString(190*mm, 15*mm, "1/2")
 
-    # Page 2
+    # ==========================================
+    # PAGE 2: 衛生認證條款
+    # ==========================================
     c.showPage()
     
     c.setFont("Helvetica-Bold", 10)
-    c.drawString(160*mm, 280*mm, f"CERTIFICAT N° {cert_number}")
+    # 修正：第 2 頁頂部編號座標同步調整至 130*mm，防止溢出
+    c.drawString(130*mm, 280*mm, f"CERTIFICAT N° {cert_number}")
     c.drawString(15*mm, 260*mm, "IV. ATTESTATION SANITAIRE / HEALTH CERTIFICATION:")
+    
     c.setFont("Helvetica", 9)
     c.drawString(15*mm, 250*mm, "Je soussigné, vétérinaire officiel, certifie que / I, official veterinarian, hereby certify that:")
     
@@ -273,7 +280,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     text_y -= 5
     c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
 
-    # Stamp 2
+    # Page 2 蓋章
     draw_official_stamp(c, x=120*mm, y=28*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -281,10 +288,9 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(190*mm, 15*mm, "2/2")
 
     c.save()
-    buffer.getvalue()
     return buffer.getvalue()
 
-# Streamlit Interface
+# Streamlit 界面
 st.set_page_config(page_title="衛生證書生成系統", layout="centered")
 st.title("📄 官方雙頁衛生證書生成器")
 
@@ -322,13 +328,13 @@ with st.form("cert_form"):
     submitted = st.form_submit_button("生成帶蓋章 PDF (Generate PDF)")
 
 if submitted:
-    with st.spinner("🚀 正在快速生成 PDF..."):
+    with st.spinner("🚀 正在生成 PDF..."):
         pdf_bytes = create_pdf(
             cert_num_input, species_input, weight_input, packages_input, 
             temp_input, date_slaughter, date_production, 
             vet_name_input, chop_date_input
         )
-    st.success("✅ PDF 渲染成功！")
+    st.success("✅ PDF 渲染成功！證書編號溢出問題已修復。")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
         data=pdf_bytes,
