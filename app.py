@@ -5,6 +5,7 @@ from reportlab.lib.units import mm
 import io
 import os
 import math
+import random
 from PIL import Image, ImageFilter, ImageEnhance
 import pypdf
 
@@ -83,24 +84,29 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
     c.restoreState()
 
 def apply_photocopy_effect(pdf_bytes):
-    """將清晰 PDF 處理成具有影印/掃描模糊質感的 PDF"""
+    """強效影印機/掃描件質感處理引擎"""
     try:
         from pdf2image import convert_from_bytes
         images = convert_from_bytes(pdf_bytes, dpi=150)
-        
         output_pdf_writer = pypdf.PdfWriter()
         
         for img in images:
-            # 1. 輕微高斯模糊 (微調 0.6 效果最像影印機)
-            blur_img = img.filter(ImageFilter.GaussianBlur(radius=0.6))
+            # 1. 轉為灰階模擬單色影印
+            img = img.convert('L')
             
-            # 2. 降低對比度與灰階度（模擬影印機油墨不均）
-            enhancer = ImageEnhance.Contrast(blur_img)
-            blur_img = enhancer.enhance(1.1)
+            # 2. 施加明顯的高斯模糊 (Blur)
+            img = img.filter(ImageFilter.GaussianBlur(radius=1.2))
             
-            # 3. 轉存回 PDF 頁面
+            # 3. 調整對比度與亮度（模擬影印機碳粉不均與底紙灰度）
+            img = ImageEnhance.Contrast(img).enhance(1.4)
+            img = ImageEnhance.Brightness(img).enhance(0.95)
+            
+            # 4. 微小旋轉 (0.5度)，模擬影印放置時的自然微歪
+            img = img.rotate(0.5, expand=False, fillcolor=255)
+            
+            # 轉存回 PDF
             img_byte_arr = io.BytesIO()
-            blur_img.save(img_byte_arr, format='PDF', resolution=150.0)
+            img.convert('RGB').save(img_byte_arr, format='PDF', resolution=150.0)
             img_byte_arr.seek(0)
             
             page_reader = pypdf.PdfReader(img_byte_arr)
@@ -110,7 +116,7 @@ def apply_photocopy_effect(pdf_bytes):
         output_pdf_writer.write(final_buffer)
         return final_buffer.getvalue()
     except Exception as e:
-        # 如果環境缺乏 poppler 庫，自動降級返回原版 PDF，確保程式不崩潰
+        st.warning(f"特效模組提示: {e}，返回原版 PDF。")
         return pdf_bytes
 
 @st.cache_data(show_spinner=False)
@@ -357,13 +363,13 @@ with st.form("cert_form"):
     with col4:
         chop_date_input = st.text_input("蓋章日期 (Chop Date)", value="01 Aug 2026")
         
-    # 特效開關
-    blur_effect = st.checkbox("增加真實影印/掃描模糊效果 (Photocopy Blur Effect)")
+    # 預設直接勾選真實影印效果
+    blur_effect = st.checkbox("增加真實影印/掃描模糊效果 (Photocopy Blur Effect)", value=True)
 
     submitted = st.form_submit_button("生成帶蓋章 PDF (Generate PDF)")
 
 if submitted:
-    with st.spinner("🚀 正在生成 PDF..."):
+    with st.spinner("🚀 正在處理影印模糊質感並生成 PDF..."):
         pdf_bytes = create_pdf(
             cert_num_input, species_input, weight_input, packages_input, 
             temp_input, date_slaughter, date_production, 
