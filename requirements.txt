@@ -1,5 +1,5 @@
 streamlit
 reportlab
 Pillow
+pypdfium2
 pypdf
-pdf2image
