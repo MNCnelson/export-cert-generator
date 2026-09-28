@@ -10,7 +10,7 @@ from PIL import Image, ImageFilter, ImageEnhance
 import pypdf
 
 def draw_curved_text(c, text, cx, cy, radius, start_angle, end_angle, font_name, font_size, is_bottom=False):
-    """沿著圓圈弧度繪製彎曲文字"""
+    """Draws curved text along a circular path."""
     c.setFont(font_name, font_size)
     num_chars = len(text)
     if num_chars == 0:
@@ -30,28 +30,28 @@ def draw_curved_text(c, text, cx, cy, radius, start_angle, end_angle, font_name,
         c.restoreState()
 
 def draw_official_stamp(c, x, y, vet_name, chop_date):
-    """1:1 高精度向量印章"""
+    """1:1 precision vector veterinarian stamp renderer."""
     c.saveState()
     c.translate(x, y)
     c.setStrokeColorRGB(0.10, 0.25, 0.55)
     c.setFillColorRGB(0.10, 0.25, 0.55)
     c.rotate(6.0)
 
-    # 1. 矩形外框
+    # 1. Main Stamp Rectangle Box
     c.setLineWidth(1.2)
     c.rect(0, 0, 76*mm, 44*mm)
 
-    # 2. 獸醫姓名與頭銜
+    # 2. Doctor Name & Title
     c.setFont("Times-Bold", 16)
     c.drawCentredString(38*mm, 35*mm, vet_name)
     c.setFont("Times-Italic", 13)
     c.drawCentredString(38*mm, 28*mm, "Vétérinaire Officiel")
 
-    # 3. 動態日期
+    # 3. Dynamic Chop Date
     c.setFont("Helvetica-Bold", 14)
     c.drawCentredString(35*mm, 15*mm, chop_date)
 
-    # 4. 右下角雙圈官方圓印
+    # 4. Circular Seal (Bottom Right Corner)
     seal_x, seal_y = 62*mm, 11*mm
     c.setLineWidth(1)
     c.circle(seal_x, seal_y, 10.8*mm)
@@ -70,7 +70,7 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
     
     draw_curved_text(c, "MINISTERE DE L'AGRICULTURE", seal_x, seal_y, 8.5*mm, 220, 320, "Helvetica-Bold", 2.8, True)
 
-    # 5. 簽名筆跡
+    # 5. Overlapping Signature Lines
     c.setLineWidth(0.8)
     p = c.beginPath()
     p.moveTo(-15*mm, -8*mm)
@@ -84,29 +84,28 @@ def draw_official_stamp(c, x, y, vet_name, chop_date):
     c.restoreState()
 
 def apply_photocopy_effect(pdf_bytes):
-    """基於 pypdfium2 的免外部依賴影印機質感處理引擎"""
+    """Photocopy effect processing engine using pypdfium2."""
     pdf = pdfium.PdfDocument(pdf_bytes)
     output_pdf_writer = pypdf.PdfWriter()
     
     for i in range(len(pdf)):
-        # 1. 渲染 PDF 頁面為 PIL 圖片 (150 DPI)
         page = pdf[i]
         image = page.render(scale=150/72).to_pil()
         
-        # 2. 轉灰階，模擬單色影印
+        # Convert to grayscale
         gray_img = image.convert('L')
         
-        # 3. 高斯模糊 (1.0 像素)，模擬影印機光學鏡頭失焦
+        # Gaussian Blur
         blurred_img = gray_img.filter(ImageFilter.GaussianBlur(radius=1.0))
         
-        # 4. 增加對比度與調整亮度，模擬碳粉與黑白度不均
+        # Contrast & Brightness adjustments
         enhanced_img = ImageEnhance.Contrast(blurred_img).enhance(1.3)
         enhanced_img = ImageEnhance.Brightness(enhanced_img).enhance(0.96)
         
-        # 5. 輕微歪斜 0.4 度，模擬放紙不平
+        # Micro rotation
         rotated_img = enhanced_img.rotate(0.4, expand=False, fillcolor=255)
         
-        # 轉存回 PDF
+        # Export back to PDF
         img_byte_arr = io.BytesIO()
         rotated_img.convert('RGB').save(img_byte_arr, format='PDF', resolution=150.0)
         img_byte_arr.seek(0)
@@ -124,7 +123,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c = canvas.Canvas(buffer, pagesize=A4)
     
     # ==========================================
-    # PAGE 1: 貨物標識與目的地
+    # PAGE 1: Product Details & Destination
     # ==========================================
     c.setFont("Helvetica-Bold", 9)
     c.drawString(15*mm, 280*mm, "ORIGINAL")
@@ -240,7 +239,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(20*mm, 53*mm, "M&C ASIA LIMITED KWONG GA FACTORY BUILDING 17/F UNIT F 64 VICTORIA ROAD")
     c.drawString(20*mm, 48*mm, "KENNEDY TOWN HONG KONG")
     
-    # Page 1 蓋章
+    # Page 1 Stamp
     draw_official_stamp(c, x=128*mm, y=48*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -248,7 +247,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.drawString(190*mm, 15*mm, "1/2")
 
     # ==========================================
-    # PAGE 2: 衛生認證條款
+    # PAGE 2: Health Certification Clauses
     # ==========================================
     c.showPage()
     
@@ -313,7 +312,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     text_y -= 5
     c.drawString(15*mm, text_y*mm, "Cachet officiel / Official stamp")
 
-    # Page 2 蓋章
+    # Page 2 Stamp
     draw_official_stamp(c, x=120*mm, y=28*mm, vet_name=vet_name, chop_date=chop_date)
 
     c.setFont("Helvetica", 8)
@@ -327,7 +326,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
         return apply_photocopy_effect(raw_pdf)
     return raw_pdf
 
-# Streamlit 界面
+# Streamlit App UI
 st.set_page_config(page_title="衛生證書生成系統", layout="centered")
 st.title("📄 官方雙頁衛生證書生成器")
 
@@ -337,12 +336,14 @@ with st.form("cert_form"):
     
     col1, col2 = st.columns(2)
     with col1:
+        # Added BOTTARGA to the product list
         species_input = st.selectbox("物種 (Species)", [
             "CAILLE", 
             "PIGEONNEAU / PIGEON", 
             "SWEETBREAD", 
             "LAMB RACK", 
-            "PORK"
+            "PORK",
+            "BOTTARGA"
         ])
         packages_input = st.text_input("包裝數量 (Packages)", value="10 box")
         date_slaughter = st.text_input("屠宰日期 (Date of slaughter)", value="SEE ANNEXE")
@@ -362,19 +363,18 @@ with st.form("cert_form"):
     with col4:
         chop_date_input = st.text_input("蓋章日期 (Chop Date)", value="01 Aug 2026")
         
-    # 預設勾選影印模糊效果
     blur_effect = st.checkbox("增加真實影印/掃描模糊效果 (Photocopy Blur Effect)", value=True)
 
     submitted = st.form_submit_button("生成帶蓋章 PDF (Generate PDF)")
 
 if submitted:
-    with st.spinner("🚀 正在處理影印模糊質感並生成 PDF..."):
+    with st.spinner("🚀 正在生成 PDF..."):
         pdf_bytes = create_pdf(
             cert_num_input, species_input, weight_input, packages_input, 
             temp_input, date_slaughter, date_production, 
             vet_name_input, chop_date_input, blur_effect
         )
-    st.success("✅ PDF 渲染成功！")
+    st.success("✅ PDF 渲染成功！已成功新增 Bottarga 商品選項。")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
         data=pdf_bytes,
