@@ -168,7 +168,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.setFont("Helvetica", 9)
     c.drawString(20*mm, 194*mm, "b) Nature des pièces / Nature of joints:")
     c.line(75*mm, 194*mm, 195*mm, 194*mm)
-    c.drawString(80*mm, 195*mm, "SEE ANNEXE")
+    # Removed "SEE ANNEXE" text here per request
     
     c.drawString(20*mm, 186*mm, "c) Nombre de pièces ou d'unités d'emballage / Number of joints or packages:")
     c.line(135*mm, 186*mm, 195*mm, 186*mm)
@@ -336,7 +336,6 @@ with st.form("cert_form"):
     
     col1, col2 = st.columns(2)
     with col1:
-        # Added BOTTARGA to the product list
         species_input = st.selectbox("物種 (Species)", [
             "CAILLE", 
             "PIGEONNEAU / PIGEON", 
@@ -374,7 +373,7 @@ if submitted:
             temp_input, date_slaughter, date_production, 
             vet_name_input, chop_date_input, blur_effect
         )
-    st.success("✅ PDF 渲染成功！已成功新增 Bottarga 商品選項。")
+    st.success("✅ PDF 渲染成功！已移除 Nature of joints 旁邊的 SEE ANNEXE。")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
         data=pdf_bytes,
