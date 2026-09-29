@@ -118,7 +118,7 @@ def apply_photocopy_effect(pdf_bytes):
     return final_buffer.getvalue()
 
 @st.cache_data(show_spinner=False)
-def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production, vet_name, chop_date, enable_blur=False):
+def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, date_production, consignor, vet_name, chop_date, enable_blur=False):
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     
@@ -168,7 +168,6 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.setFont("Helvetica", 9)
     c.drawString(20*mm, 194*mm, "b) Nature des pièces / Nature of joints:")
     c.line(75*mm, 194*mm, 195*mm, 194*mm)
-    # Removed "SEE ANNEXE" text here per request
     
     c.drawString(20*mm, 186*mm, "c) Nombre de pièces ou d'unités d'emballage / Number of joints or packages:")
     c.line(135*mm, 186*mm, 195*mm, 186*mm)
@@ -231,7 +230,7 @@ def create_pdf(cert_number, species, weight, packages, temp, date_slaughter, dat
     c.setFont("Helvetica", 9)
     c.drawString(20*mm, 71*mm, "Nom et adresse de l'expéditeur / Name and address of consignor:")
     c.setFont("Helvetica-Bold", 9)
-    c.drawString(20*mm, 66*mm, "SOCIETE HUGUENIN 32 Avenue de la Villette 94637 Rungis Cedex")
+    c.drawString(20*mm, 66*mm, consignor)
 
     c.setFont("Helvetica", 9)
     c.drawString(20*mm, 58*mm, "Nom et adresse du destinataire / Name and address of consignee:")
@@ -332,7 +331,7 @@ st.title("📄 官方雙頁衛生證書生成器")
 
 with st.form("cert_form"):
     st.subheader("基礎資訊 / Basic Information")
-    cert_num_input = st.text_input("證書編號 (Certificate N°)", value="FR-094-26-0349818")
+    cert_num_input = st.text_input("證書編號 (Certificate N°)", value="FR-094-041-004")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -344,12 +343,24 @@ with st.form("cert_form"):
             "PORK",
             "BOTTARGA"
         ])
-        packages_input = st.text_input("包裝數量 (Packages)", value="10 box")
-        date_slaughter = st.text_input("屠宰日期 (Date of slaughter)", value="SEE ANNEXE")
+        packages_input = st.text_input("包裝數量 (Packages)", value="50 pcs")
+        date_slaughter = st.text_input("屠宰日期 (Date of slaughter)", value="22/9/2026")
     with col2:
         weight_input = st.text_input("總淨重 (Net Weight)", value="30KG")
         temp_input = st.text_input("儲存溫度 (Temperature)", value="+0 +4 °C")
-        date_production = st.text_input("生產日期 (Date of production)", value="SEE ANNEXE")
+        date_production = st.text_input("生產日期 (Date of production)", value="22/9/2026")
+
+    st.subheader("發貨人資訊 / Consignor Details")
+    consignor_option = st.selectbox("發貨人 (Consignor)", [
+        "SOCIETE HUGUENIN 32 Avenue de la Villette 94637 Rungis Cedex",
+        "MAISON DEHESA",
+        "Custom / 自訂輸入"
+    ])
+    
+    if consignor_option == "Custom / 自訂輸入":
+        consignor_input = st.text_input("輸入發貨人名稱及地址 (Custom Consignor Address)", value="")
+    else:
+        consignor_input = consignor_option
         
     st.subheader("獸醫蓋章資訊 / Veterinarian Stamp Options")
     col3, col4 = st.columns(2)
@@ -360,7 +371,7 @@ with st.form("cert_form"):
             "Dr Amal BELACEL"
         ])
     with col4:
-        chop_date_input = st.text_input("蓋章日期 (Chop Date)", value="01 Aug 2026")
+        chop_date_input = st.text_input("蓋章日期 (Chop Date)", value="23 Sep 2026")
         
     blur_effect = st.checkbox("增加真實影印/掃描模糊效果 (Photocopy Blur Effect)", value=True)
 
@@ -370,10 +381,10 @@ if submitted:
     with st.spinner("🚀 正在生成 PDF..."):
         pdf_bytes = create_pdf(
             cert_num_input, species_input, weight_input, packages_input, 
-            temp_input, date_slaughter, date_production, 
+            temp_input, date_slaughter, date_production, consignor_input,
             vet_name_input, chop_date_input, blur_effect
         )
-    st.success("✅ PDF 渲染成功！已移除 Nature of joints 旁邊的 SEE ANNEXE。")
+    st.success("✅ PDF 渲染成功！已新增發貨人可選項目 (含 MAISON DEHESA)。")
     st.download_button(
         label="⬇️ 下載完整證書 (Download)",
         data=pdf_bytes,
